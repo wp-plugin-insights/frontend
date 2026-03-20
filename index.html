@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WP Plugin Insights — WordPress Plugin Quality Directory</title>
+    <meta name="description" content="Analyse the quality, security, and maintenance of any WordPress.org plugin. Letter grades at a glance.">
+    <link rel="stylesheet" href="assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<!-- ── Navbar ───────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-md border-bottom" aria-label="Main navigation">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">
+            <i class="bi bi-plugin me-1"></i>PluginInsight
+        </a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <a href="about.html" class="nav-link px-2">About</a>
+            <button id="theme-toggle" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Toggle theme">
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <i class="bi bi-moon-fill theme-icon-dark d-none"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<section class="hero text-center">
+    <div class="container">
+        <h1 class="fw-bold mb-2">WordPress Plugin Quality at a Glance</h1>
+        <p class="text-body-secondary mb-4">Search any plugin from WordPress.org and get a clear quality &amp; security report.</p>
+        <div class="search-wrap">
+            <form id="plugin-search-form" role="search">
+                <div class="input-group input-group-lg shadow-sm">
+                    <input
+                        type="search"
+                        name="q"
+                        class="form-control"
+                        placeholder="Plugin slug or name — e.g. woocommerce"
+                        aria-label="Search plugins"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-search me-1"></i>Analyse
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ── Recently reviewed ─────────────────────────────────── -->
+<main class="container pb-5">
+    <h2 class="h5 fw-semibold mb-3">Recently Reviewed</h2>
+    <div class="row g-3" id="plugin-grid">
+
+        <!-- Card: woocommerce -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=woocommerce" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">WooCommerce</div>
+                            <code class="plugin-slug text-body-secondary">woocommerce</code>
+                        </div>
+                        <span class="grade grade-b ms-2" title="Overall grade: B">B</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-a" title="Compatibility: A">A</span>
+                        <span class="grade grade-b" title="Security: B">B</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-18">18 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card: akismet -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=akismet" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">Akismet Anti-spam</div>
+                            <code class="plugin-slug text-body-secondary">akismet</code>
+                        </div>
+                        <span class="grade grade-a ms-2" title="Overall grade: A">A</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-a" title="Compatibility: A">A</span>
+                        <span class="grade grade-a" title="Security: A">A</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-17">17 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card: yoast-seo -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=yoast-seo" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">Yoast SEO</div>
+                            <code class="plugin-slug text-body-secondary">yoast-seo</code>
+                        </div>
+                        <span class="grade grade-a ms-2" title="Overall grade: A">A</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-a" title="Compatibility: A">A</span>
+                        <span class="grade grade-b" title="Security: B">B</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-17">17 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card: contact-form-7 -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=contact-form-7" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">Contact Form 7</div>
+                            <code class="plugin-slug text-body-secondary">contact-form-7</code>
+                        </div>
+                        <span class="grade grade-c ms-2" title="Overall grade: C">C</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-b" title="Compatibility: B">B</span>
+                        <span class="grade grade-c" title="Security: C">C</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-16">16 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card: jetpack -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=jetpack" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">Jetpack</div>
+                            <code class="plugin-slug text-body-secondary">jetpack</code>
+                        </div>
+                        <span class="grade grade-b ms-2" title="Overall grade: B">B</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-a" title="Compatibility: A">A</span>
+                        <span class="grade grade-b" title="Security: B">B</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-15">15 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Card: wordfence -->
+        <div class="col-12 col-sm-6 col-lg-4">
+            <a href="plugin.html?slug=wordfence" class="card plugin-card text-decoration-none h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold">Wordfence Security</div>
+                            <code class="plugin-slug text-body-secondary">wordfence</code>
+                        </div>
+                        <span class="grade grade-b ms-2" title="Overall grade: B">B</span>
+                    </div>
+                    <div class="grade-row mb-3" aria-label="Dimension grades">
+                        <span class="grade grade-b" title="Compatibility: B">B</span>
+                        <span class="grade grade-a" title="Security: A">A</span>
+                    </div>
+                    <div class="text-body-secondary small">Reviewed <time datetime="2026-03-14">14 Mar 2026</time></div>
+                </div>
+            </a>
+        </div>
+
+    </div><!-- /#plugin-grid -->
+</main>
+
+<!-- ── Footer ────────────────────────────────────────────── -->
+<footer class="border-top py-4 text-center text-body-secondary small">
+    <div class="container">
+        PluginInsight — independent quality signals for WordPress plugins.
+        Not affiliated with WordPress.org or Automattic.
+    </div>
+</footer>
+
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

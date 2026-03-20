@@ -1,0 +1,88 @@
+/* PluginInsight — custom styles on top of Bootstrap 5 */
+
+/* ── Grade badges ─────────────────────────────────────────── */
+.grade {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: .35rem;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.grade-a { background-color: #1a9e4a; }
+.grade-b { background-color: #5cb85c; }
+.grade-c { background-color: #e6a817; }
+.grade-d { background-color: #e07b1a; }
+.grade-f { background-color: #d9322e; }
+
+/* Large variant used in the plugin detail header */
+.grade-lg {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1.75rem;
+    border-radius: .5rem;
+}
+
+/* ── Mini-badge row on plugin cards ──────────────────────── */
+.grade-row {
+    display: flex;
+    gap: .35rem;
+    flex-wrap: wrap;
+}
+
+.grade-row .grade {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: .8rem;
+    border-radius: .25rem;
+}
+
+/* ── Analysis card expand/collapse ───────────────────────── */
+.analysis-card .card-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.analysis-card .card-header .toggle-icon {
+    transition: transform .2s ease;
+}
+
+.analysis-card .card-header.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* ── Plugin slug always monospace ────────────────────────── */
+.plugin-slug {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: .875em;
+}
+
+/* ── Hero search ─────────────────────────────────────────── */
+.hero {
+    padding: 4rem 0 3rem;
+}
+
+.hero .search-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+/* ── Responsive plugin grid ──────────────────────────────── */
+.plugin-card {
+    transition: box-shadow .15s ease;
+}
+
+.plugin-card:hover {
+    box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .15);
+}
+
+/* ── Light/dark toggle ───────────────────────────────────── */
+#theme-toggle {
+    cursor: pointer;
+}

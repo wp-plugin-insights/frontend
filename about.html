@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — WP Plugin Insights</title>
+    <meta name="description" content="About WP Plugin Insights — methodology, grading criteria, and project information.">
+    <link rel="stylesheet" href="assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<!-- ── Navbar ───────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-md border-bottom" aria-label="Main navigation">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">
+            <i class="bi bi-plugin me-1"></i>PluginInsight
+        </a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <a href="about.html" class="nav-link px-2 active" aria-current="page">About</a>
+            <button id="theme-toggle" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Toggle theme">
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <i class="bi bi-moon-fill theme-icon-dark d-none"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<main class="container py-5" style="max-width:760px">
+    <h1 class="fw-bold mb-4">About WP Plugin Insights</h1>
+
+    <p class="lead">PluginInsight is an independent platform that analyses WordPress.org plugins across multiple quality dimensions and assigns letter grades (A–F) to give developers, site owners, and hosting teams a clear, actionable signal.</p>
+
+    <hr class="my-4">
+
+    <h2 class="h5 fw-semibold mb-3">Grading methodology</h2>
+    <p>Each plugin is evaluated per dimension. The overall grade reflects the lowest individual dimension score, weighted by severity.</p>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Grade</th>
+                <th>Meaning</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="grade grade-a" style="width:1.6rem;height:1.6rem;font-size:.85rem">A</span></td><td>Excellent — no significant issues</td></tr>
+            <tr><td><span class="grade grade-b" style="width:1.6rem;height:1.6rem;font-size:.85rem">B</span></td><td>Good — minor issues only</td></tr>
+            <tr><td><span class="grade grade-c" style="width:1.6rem;height:1.6rem;font-size:.85rem">C</span></td><td>Acceptable — some concerns worth reviewing</td></tr>
+            <tr><td><span class="grade grade-d" style="width:1.6rem;height:1.6rem;font-size:.85rem">D</span></td><td>Poor — significant issues present</td></tr>
+            <tr><td><span class="grade grade-f" style="width:1.6rem;height:1.6rem;font-size:.85rem">F</span></td><td>Failing — critical issues or abandoned plugin</td></tr>
+        </tbody>
+    </table>
+
+    <h2 class="h5 fw-semibold mt-4 mb-3">Analysis dimensions</h2>
+    <ul>
+        <li><strong>Compatibility &amp; Requirements</strong> — WordPress and PHP version compatibility, last update date.</li>
+        <li><strong>Security</strong> — Known CVEs from WPScan / Patchstack / NVD, patch status.</li>
+        <li><em>Code Quality, Translations, Performance, Maintenance, License — coming in future phases.</em></li>
+    </ul>
+
+    <h2 class="h5 fw-semibold mt-4 mb-3">Data sources</h2>
+    <ul>
+        <li><a href="https://api.wordpress.org/plugins/info/1.2/" target="_blank" rel="noopener noreferrer">WordPress.org Plugins API</a></li>
+        <li>WPScan / Patchstack (planned)</li>
+        <li>NVD — National Vulnerability Database (planned)</li>
+    </ul>
+
+    <p class="text-body-secondary small mt-4">PluginInsight is not affiliated with WordPress.org, the WordPress Foundation, or Automattic.</p>
+</main>
+
+<!-- ── Footer ────────────────────────────────────────────── -->
+<footer class="border-top py-4 text-center text-body-secondary small">
+    <div class="container">
+        PluginInsight — independent quality signals for WordPress plugins.
+        Not affiliated with WordPress.org or Automattic.
+    </div>
+</footer>
+
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

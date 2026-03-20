@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WooCommerce — WP Plugin Insights</title>
+    <meta name="description" content="Quality, security, and compatibility analysis for the WooCommerce WordPress plugin.">
+    <link rel="stylesheet" href="assets/vendor/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+
+<!-- ── Navbar ───────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-md border-bottom" aria-label="Main navigation">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="index.html">
+            <i class="bi bi-plugin me-1"></i>PluginInsight
+        </a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <a href="about.html" class="nav-link px-2">About</a>
+            <button id="theme-toggle" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Toggle theme">
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <i class="bi bi-moon-fill theme-icon-dark d-none"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Breadcrumb ────────────────────────────────────────── -->
+<div class="container mt-3">
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">woocommerce</li>
+        </ol>
+    </nav>
+</div>
+
+<!-- ── Plugin header ─────────────────────────────────────── -->
+<header class="container mt-3 mb-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start gap-3 flex-wrap">
+                <span class="grade grade-lg grade-b" title="Overall grade: B">B</span>
+                <div class="flex-grow-1">
+                    <h1 class="h3 fw-bold mb-1">WooCommerce</h1>
+                    <div class="mb-2">
+                        <code class="plugin-slug text-body-secondary">woocommerce</code>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3 text-body-secondary small">
+                        <span><i class="bi bi-person me-1"></i>Automattic</span>
+                        <span><i class="bi bi-tag me-1"></i>9.5.1</span>
+                        <span><i class="bi bi-calendar3 me-1"></i>Updated 12 Mar 2026</span>
+                        <span><i class="bi bi-download me-1"></i>241,000,000+ downloads</span>
+                        <a href="https://wordpress.org/plugins/woocommerce/" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>WordPress.org
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ── Analysis cards ────────────────────────────────────── -->
+<main class="container pb-5">
+    <div class="d-flex flex-column gap-3">
+
+        <!-- Card 1: Compatibility & Requirements -->
+        <div class="card analysis-card">
+            <div
+                class="card-header d-flex align-items-center justify-content-between"
+                data-bs-toggle="collapse"
+                data-bs-target="#card-compat"
+                aria-expanded="true"
+                aria-controls="card-compat"
+            >
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-check2-circle fs-5 text-success"></i>
+                    <span class="fw-semibold">Compatibility &amp; Requirements</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="grade grade-a" title="Grade: A">A</span>
+                    <i class="bi bi-chevron-down toggle-icon text-body-secondary"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="card-compat">
+                <div class="card-body border-top">
+                    <p class="text-body-secondary mb-3">
+                        Fully compatible with current WordPress and PHP versions. Actively maintained and regularly updated.
+                    </p>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-body-secondary" style="width:55%">Requires WordPress</td>
+                                <td>6.6 or higher</td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Tested up to</td>
+                                <td>6.7.2 <span class="badge text-bg-success ms-1">Current</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Requires PHP</td>
+                                <td>7.4 or higher</td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Last updated</td>
+                                <td>12 Mar 2026 <span class="badge text-bg-success ms-1">Recent</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Plugin dependencies</td>
+                                <td><em class="text-body-secondary">None</em></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Security -->
+        <div class="card analysis-card">
+            <div
+                class="card-header d-flex align-items-center justify-content-between"
+                data-bs-toggle="collapse"
+                data-bs-target="#card-security"
+                aria-expanded="true"
+                aria-controls="card-security"
+            >
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check fs-5 text-warning"></i>
+                    <span class="fw-semibold">Security</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="grade grade-b" title="Grade: B">B</span>
+                    <i class="bi bi-chevron-down toggle-icon text-body-secondary"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="card-security">
+                <div class="card-body border-top">
+                    <p class="text-body-secondary mb-3">
+                        No unpatched critical vulnerabilities. Minor issues resolved promptly. High-profile target due to install base.
+                    </p>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-body-secondary" style="width:55%">Known CVEs (unpatched)</td>
+                                <td><span class="badge text-bg-success">0</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Known CVEs (patched)</td>
+                                <td><span class="badge text-bg-secondary">12</span></td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Last security advisory</td>
+                                <td>Jan 2026</td>
+                            </tr>
+                            <tr>
+                                <td class="text-body-secondary">Vulnerability status</td>
+                                <td><span class="text-success fw-semibold">All patched</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.d-flex -->
+
+    <!-- Grade legend -->
+    <div class="mt-4">
+        <h2 class="h6 text-body-secondary mb-2">Grade scale</h2>
+        <div class="d-flex flex-wrap gap-2 small">
+            <span class="d-flex align-items-center gap-1"><span class="grade grade-a" style="width:1.4rem;height:1.4rem;font-size:.75rem">A</span> Excellent</span>
+            <span class="d-flex align-items-center gap-1"><span class="grade grade-b" style="width:1.4rem;height:1.4rem;font-size:.75rem">B</span> Good</span>
+            <span class="d-flex align-items-center gap-1"><span class="grade grade-c" style="width:1.4rem;height:1.4rem;font-size:.75rem">C</span> Acceptable</span>
+            <span class="d-flex align-items-center gap-1"><span class="grade grade-d" style="width:1.4rem;height:1.4rem;font-size:.75rem">D</span> Poor</span>
+            <span class="d-flex align-items-center gap-1"><span class="grade grade-f" style="width:1.4rem;height:1.4rem;font-size:.75rem">F</span> Failing</span>
+        </div>
+    </div>
+</main>
+
+<!-- ── Footer ────────────────────────────────────────────── -->
+<footer class="border-top py-4 text-center text-body-secondary small">
+    <div class="container">
+        PluginInsight — independent quality signals for WordPress plugins.
+        Not affiliated with WordPress.org or Automattic.
+    </div>
+</footer>
+
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
