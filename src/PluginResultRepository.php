@@ -171,6 +171,35 @@ class PluginResultRepository
     }
 
     /**
+     * Returns the distinct plugin versions that have at least one analysis result,
+     * sorted newest first by version_compare.
+     *
+     * @return list<string>
+     */
+    public function getAnalysedVersions(int $pluginId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT DISTINCT plugin_version
+             FROM pluginresult
+             WHERE plugin_id = ?'
+        );
+        $stmt->bind_param('i', $pluginId);
+        $stmt->execute();
+
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $versions = array_column($rows, 'plugin_version');
+
+        usort(
+            $versions,
+            static fn (string $a, string $b): int => version_compare($b, $a)
+        );
+
+        return array_values($versions);
+    }
+
+    /**
      * Returns all results for a specific plugin + version, keyed by runner slug.
      *
      * Used by the plugin detail page to render per-runner analysis cards.

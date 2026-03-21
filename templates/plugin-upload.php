@@ -11,18 +11,19 @@
  *   $upload          array<string, mixed>   — row from the plugin_upload table
  *   $uuid            string                 — validated UUID
  *   $analysisResults array<string, array<string, mixed>>  — runner_slug → decoded result JSON
+ *   $wpVersions      list<array{version: string, php_min: string, mysql_min: string}>
  */
 
 declare(strict_types=1);
 
 $slug        = (string) ($upload['plugin_slug']        ?? '');
-$name        = (string) ($upload['plugin_name']        ?? $slug);
+$name        = html_entity_decode((string) ($upload['plugin_name'] ?? $slug), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $version     = (string) ($upload['plugin_version']     ?? '');
-$author      = (string) ($upload['plugin_author']      ?? '');
+$author      = html_entity_decode((string) ($upload['plugin_author'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $requires    = (string) ($upload['plugin_requires']    ?? '');
 $tested      = (string) ($upload['plugin_tested']      ?? '');
 $requiresPhp = (string) ($upload['plugin_requires_php'] ?? '');
-$description = (string) ($upload['plugin_description'] ?? '');
+$description = html_entity_decode((string) ($upload['plugin_description'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 $status      = (string) ($upload['upload_status']      ?? 'pending');
 $uploadedAt  = (string) ($upload['uploaded_at']        ?? '');
 $uploadError = (string) ($upload['upload_error']       ?? '');
@@ -33,10 +34,12 @@ $apiUrl = 'https://api.plugininsight.com/' . htmlspecialchars($uuid, ENT_QUOTES,
 
 $isPending = in_array($status, ['pending', 'queued'], true);
 
-// Freshness badges (same logic as plugin.php)
-$testedBadge = '';
+// "Tested up to" badge — compare against live WP version data (same logic as plugin.php).
+$latestWpVersion = !empty($wpVersions) ? (string) $wpVersions[0]['version'] : '6.6';
+$latestWpMinor   = implode('.', array_slice(explode('.', $latestWpVersion), 0, 2));
+$testedBadge     = '';
 if ($tested !== '') {
-    $testedBadge = version_compare($tested, '6.6', '>=') ? 'Current' : 'Outdated';
+    $testedBadge = version_compare($tested, $latestWpMinor, '>=') ? 'Current' : 'Outdated';
 }
 ?>
 

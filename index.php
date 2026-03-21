@@ -60,7 +60,7 @@ $resultRepo = null;
 
 try {
     require_once __DIR__ . '/../dbcon.php';
-    /** @var \mysqli $db */
+    $db            = db_connect();
     $userRepo      = new UserRepository($db);
     $repo          = new PluginRepository($db);
     $auth          = new Auth($userRepo);
@@ -185,6 +185,22 @@ function esc(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+// ── WordPress version data ────────────────────────────────────────────────────
+// Loaded once and passed to any template that needs to assess plugin compatibility.
+// Populated hourly by crons/fetch-wp-versions.php via site_setting 'wp_versions'.
+
+/** @var list<array{version: string, php_min: string, mysql_min: string}> $wpVersions */
+$wpVersions = [];
+if ($settingRepo !== null) {
+    $raw = $settingRepo->get('wp_versions');
+    if ($raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $wpVersions = array_values($decoded);
+        }
+    }
+}
+
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 
 ob_start();
@@ -194,7 +210,7 @@ switch ($page) {
     case 'home':
         $pageTitle    = $i18n->t('home.page_title');
         $pageMetaDesc = $i18n->t('home.meta_desc');
-        $plugins      = $repo !== null ? $repo->getRecent(12) : [];
+        $plugins      = $repo !== null ? $repo->getRecentAnalysed(12) : [];
         $total        = $repo !== null ? $repo->getTotalCount() : 0;
         require __DIR__ . '/templates/home.php';
         break;
@@ -223,11 +239,23 @@ switch ($page) {
         $pageTitle    = $i18n->t('plugin.page_title', ['name' => $plugin['plugin_name'] ?? $slug]);
         $pageMetaDesc = $i18n->t('plugin.meta_desc', ['name' => $plugin['plugin_name'] ?? $slug]);
 
+        $pluginId = isset($plugin['plugin_id']) ? (int) $plugin['plugin_id'] : 0;
+
+        // Load all distinct versions that have analysis results
+        $analysedVersions = [];
+        if ($resultRepo !== null && $pluginId > 0) {
+            $analysedVersions = $resultRepo->getAnalysedVersions($pluginId);
+        }
+
+        // Honour ?version= if that version has results; otherwise default to the newest analysed
+        $requestedVersion = trim((string) ($_GET['version'] ?? ''));
+        $selectedVersion  = in_array($requestedVersion, $analysedVersions, true)
+            ? $requestedVersion
+            : ($analysedVersions[0] ?? (string) ($plugin['plugin_version'] ?? ''));
+
         $analysisResults = [];
-        $pluginId        = isset($plugin['plugin_id']) ? (int) $plugin['plugin_id'] : 0;
-        $pluginVersion   = (string) ($plugin['plugin_version'] ?? '');
-        if ($resultRepo !== null && $pluginId > 0 && $pluginVersion !== '') {
-            $analysisResults = $resultRepo->getByPluginVersion($pluginId, $pluginVersion);
+        if ($resultRepo !== null && $pluginId > 0 && $selectedVersion !== '') {
+            $analysisResults = $resultRepo->getByPluginVersion($pluginId, $selectedVersion);
         }
 
         require __DIR__ . '/templates/plugin.php';
@@ -437,7 +465,8 @@ switch ($page) {
         $uploadSlug       = (string) ($upload['plugin_slug']    ?? '');
         $uploadVersion    = (string) ($upload['plugin_version'] ?? '');
         $uploadStatus     = (string) ($upload['upload_status']  ?? '');
-        if ($uploadStatus === 'done' && $uploadSlug !== '' && $uploadVersion !== ''
+        if (
+            $uploadStatus === 'done' && $uploadSlug !== '' && $uploadVersion !== ''
             && $repo !== null && $resultRepo !== null
         ) {
             $uploadPlugin = $repo->findBySlug($uploadSlug);
@@ -582,7 +611,8 @@ switch ($page) {
         if ($resultRepo !== null && !empty($recentUploads)) {
             $pairs = [];
             foreach ($recentUploads as $up) {
-                if ((string) ($up['upload_status'] ?? '') === 'done'
+                if (
+                    (string) ($up['upload_status'] ?? '') === 'done'
                     && (string) ($up['plugin_slug']    ?? '') !== ''
                     && (string) ($up['plugin_version'] ?? '') !== ''
                 ) {

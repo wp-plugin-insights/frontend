@@ -26,6 +26,7 @@ return [
     'home.search_btn'       => 'Analyse',
     'home.recently_reviewed' => 'Recently Reviewed',
     'home.updated_on'       => 'Updated',
+    'home.analysed_on'      => 'Analysed',
     'home.no_plugins'       => 'No plugins in the database yet. Check back soon.',
     'home.db_count'         => '{count} plugins in the database',
 
@@ -35,7 +36,9 @@ return [
     'plugin.wp_org_link'    => 'WordPress.org',
     'plugin.downloads'      => 'downloads',
     'plugin.active_installs' => 'active installs',
-    'plugin.version'        => 'Version',
+    'plugin.version'             => 'Version',
+    'plugin.version_picker_label' => 'Select analysis version',
+    'plugin.version_current'      => 'current',
     'plugin.updated'        => 'Updated',
     'plugin.added'          => 'Added',
     'plugin.no_data'        => '—',

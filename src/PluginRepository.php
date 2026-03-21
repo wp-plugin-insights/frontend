@@ -46,20 +46,37 @@ class PluginRepository
     }
 
     /**
-     * Returns the most recently updated plugins that have a name populated.
+     * Returns the $limit most recently *analysed* plugins, one row per plugin
+     * (no duplicates across versions or runners), ordered by the date of the
+     * most recent analysis result.
+     *
+     * Each row includes `latest_analysis` (datetime) and `latest_grade`
+     * (single letter A–F, or null if the JSON has no grade field).
      *
      * @return list<array<string, mixed>>
      */
-    public function getRecent(int $limit = 12): array
+    public function getRecentAnalysed(int $limit = 12): array
     {
         $stmt = $this->db->prepare(
-            'SELECT plugin_slug, plugin_name, plugin_version,
-                    plugin_installs, plugin_downloaded, plugin_last_updated,
-                    plugin_icons, plugin_short_description
-             FROM plugin
-             WHERE plugin_name IS NOT NULL AND plugin_name != \'\'
-             ORDER BY plugin_last_updated DESC
-             LIMIT ?'
+            "SELECT p.plugin_slug,
+                    p.plugin_name,
+                    p.plugin_version,
+                    p.plugin_installs,
+                    p.plugin_downloaded,
+                    p.plugin_last_updated,
+                    p.plugin_icons,
+                    p.plugin_short_description,
+                    MAX(pr.pluginresult_date) AS latest_analysis,
+                    (SELECT JSON_VALUE(pr2.pluginresult_result, '$.score.grade')
+                     FROM pluginresult pr2
+                     WHERE pr2.plugin_id = p.plugin_id
+                     ORDER BY pr2.pluginresult_date DESC
+                     LIMIT 1) AS latest_grade
+             FROM plugin p
+             JOIN pluginresult pr ON pr.plugin_id = p.plugin_id
+             GROUP BY p.plugin_id
+             ORDER BY latest_analysis DESC
+             LIMIT ?"
         );
 
         $stmt->bind_param('i', $limit);
