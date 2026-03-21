@@ -96,6 +96,81 @@ class PluginResultRepository
     }
 
     /**
+     * Returns best (most recent) grades for a list of plugin slug + version pairs.
+     *
+     * Used by the admin panel to annotate API upload rows with grade badges
+     * without loading full result JSON.
+     *
+     * @param  list<array{slug: string, version: string}> $pairs
+     * @return array<string, string>  "{slug}:{version}" → grade letter (A–F)
+     */
+    public function getGradesBySlugVersions(array $pairs): array
+    {
+        if (empty($pairs)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($pairs), '(?,?)'));
+
+        $stmt = $this->db->prepare(
+            "SELECT p.plugin_slug,
+                    pr.plugin_version,
+                    JSON_VALUE(pr.pluginresult_result, '$.score.grade') AS grade
+             FROM pluginresult pr
+             JOIN plugin p ON p.plugin_id = pr.plugin_id
+             WHERE (p.plugin_slug, pr.plugin_version) IN ({$placeholders})
+             ORDER BY pr.pluginresult_date DESC"
+        );
+
+        $params = [];
+        $types  = '';
+        foreach ($pairs as $pair) {
+            $params[] = $pair['slug'];
+            $params[] = $pair['version'];
+            $types   .= 'ss';
+        }
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+
+        $grades = [];
+        foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
+            $key = $row['plugin_slug'] . ':' . $row['plugin_version'];
+            // First row wins (ORDER BY DESC → most recent)
+            if (!isset($grades[$key]) && $row['grade'] !== null) {
+                $grades[$key] = (string) $row['grade'];
+            }
+        }
+        $stmt->close();
+
+        return $grades;
+    }
+
+    /**
+     * Returns high-level analysis counts for the stats panel.
+     *
+     * @return array{analyzed_plugins: int, total_results: int}
+     */
+    public function getAnalysisStats(): array
+    {
+        $result = $this->db->query(
+            'SELECT COUNT(DISTINCT plugin_id) AS analyzed_plugins,
+                    COUNT(*)                  AS total_results
+             FROM pluginresult'
+        );
+
+        if (!$result instanceof \mysqli_result) {
+            return ['analyzed_plugins' => 0, 'total_results' => 0];
+        }
+
+        $row = $result->fetch_assoc();
+
+        return [
+            'analyzed_plugins' => (int) ($row['analyzed_plugins'] ?? 0),
+            'total_results'    => (int) ($row['total_results']    ?? 0),
+        ];
+    }
+
+    /**
      * Returns all results for a specific plugin + version, keyed by runner slug.
      *
      * Used by the plugin detail page to render per-runner analysis cards.
@@ -105,7 +180,7 @@ class PluginResultRepository
     public function getByPluginVersion(int $pluginId, string $version): array
     {
         $stmt = $this->db->prepare(
-            'SELECT r.runner_slug, pr.pluginresult_result, pr.pluginresult_date
+            'SELECT r.runner_slug, r.runner_name, pr.pluginresult_result, pr.pluginresult_date
              FROM pluginresult pr
              JOIN runner r ON r.runner_id = pr.runner_id
              WHERE pr.plugin_id = ?
@@ -123,7 +198,8 @@ class PluginResultRepository
         foreach (array_reverse($rows) as $row) {
             $decoded = json_decode((string) $row['pluginresult_result'], true);
             if (is_array($decoded)) {
-                $decoded['_date'] = $row['pluginresult_date'];
+                $decoded['_date']        = $row['pluginresult_date'];
+                $decoded['_runner_name'] = $row['runner_name'];
                 $bySlug[(string) $row['runner_slug']] = $decoded;
             }
         }

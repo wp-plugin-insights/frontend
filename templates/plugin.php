@@ -4,8 +4,9 @@
  * Plugin detail template.
  *
  * Expected variables (set by index.php before including this file):
- *   $i18n   I18n
- *   $plugin array<string, mixed>   — row from the plugin table
+ *   $i18n            I18n
+ *   $plugin          array<string, mixed>   — row from the plugin table
+ *   $analysisResults array<string, array<string, mixed>>  — runner_slug → decoded result JSON
  */
 
 declare(strict_types=1);
@@ -274,30 +275,7 @@ if ($lastUpdated !== '') {
             </div>
         </div>
 
-        <!-- Card: Security -->
-        <div class="card analysis-card">
-            <div class="card-header p-0">
-                <button class="card-header-btn"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#card-security"
-                        aria-expanded="true"
-                        aria-controls="card-security">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-shield fs-5 text-body-secondary" aria-hidden="true"></i>
-                        <span class="fw-semibold"><?= htmlspecialchars($i18n->t('plugin.security_title'), ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                    <i class="bi bi-chevron-down toggle-icon text-body-secondary" aria-hidden="true"></i>
-                </button>
-            </div>
-            <div class="collapse show" id="card-security">
-                <div class="card-body border-top">
-                    <p class="text-body-secondary mb-0">
-                        <?= htmlspecialchars($i18n->t('plugin.security_pending'), ENT_QUOTES, 'UTF-8') ?>
-                    </p>
-                </div>
-            </div>
-        </div>
+        <?php require __DIR__ . '/_runner-cards.php'; ?>
 
     </div><!-- /.d-flex -->
 

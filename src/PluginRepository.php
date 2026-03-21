@@ -24,7 +24,7 @@ class PluginRepository
     public function findBySlug(string $slug): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT plugin_slug, plugin_name, plugin_version, plugin_installs,
+            'SELECT plugin_id, plugin_slug, plugin_name, plugin_version, plugin_installs,
                     plugin_zip, plugin_requires, plugin_tested, plugin_requires_php,
                     plugin_requires_plugins, plugin_rating, plugin_num_ratings,
                     plugin_support_threads, plugin_support_threads_resolved,
@@ -83,5 +83,72 @@ class PluginRepository
         }
 
         return (int) ($result->fetch_row()[0] ?? 0);
+    }
+
+    /**
+     * Returns high-level counts for the stats panel.
+     *
+     * @return array{plugin_count: int, version_count: int}
+     */
+    public function getStats(): array
+    {
+        $result = $this->db->query(
+            'SELECT
+                 (SELECT COUNT(*) FROM plugin)          AS plugin_count,
+                 (SELECT COUNT(*) FROM plugin_version)  AS version_count'
+        );
+
+        if (!$result instanceof \mysqli_result) {
+            return ['plugin_count' => 0, 'version_count' => 0];
+        }
+
+        $row = $result->fetch_assoc();
+
+        return [
+            'plugin_count'  => (int) ($row['plugin_count']  ?? 0),
+            'version_count' => (int) ($row['version_count'] ?? 0),
+        ];
+    }
+
+    /**
+     * Returns plugins whose slug contains $term (case-insensitive), ordered by
+     * relevance (exact match first, then prefix, then anywhere), up to $limit.
+     *
+     * Each row also includes a `result_count` column with the number of
+     * analysis results stored for that plugin.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searchBySlug(string $term, int $limit = 20): array
+    {
+        $like = '%' . $term . '%';
+
+        $stmt = $this->db->prepare(
+            'SELECT p.plugin_id,
+                    p.plugin_slug,
+                    p.plugin_name,
+                    p.plugin_version,
+                    p.plugin_last_updated,
+                    COUNT(pr.plugin_id) AS result_count
+             FROM plugin p
+             LEFT JOIN pluginresult pr ON pr.plugin_id = p.plugin_id
+             WHERE p.plugin_slug LIKE ?
+             GROUP BY p.plugin_id
+             ORDER BY
+                 CASE WHEN p.plugin_slug = ? THEN 0
+                      WHEN p.plugin_slug LIKE ? THEN 1
+                      ELSE 2 END,
+                 p.plugin_slug
+             LIMIT ?'
+        );
+
+        $prefix = $term . '%';
+        $stmt->bind_param('sssi', $like, $term, $prefix, $limit);
+        $stmt->execute();
+
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        return $rows;
     }
 }

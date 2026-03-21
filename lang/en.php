@@ -53,9 +53,14 @@ return [
     'plugin.compat_badge_recent'  => 'Recent',
     'plugin.compat_badge_outdated' => 'Outdated',
 
-    // Plugin detail — security card
-    'plugin.security_title'       => 'Security',
-    'plugin.security_pending'     => 'Security analysis not yet available for this plugin.',
+    // Plugin detail — analysis cards (runner results)
+    'plugin.analysis_title'   => 'Analysis',
+    'plugin.analysis_pending' => 'Analysis results are not yet available for this plugin version.',
+    'plugin.grade_label'      => 'Grade: {grade}',
+    'plugin.score_label'      => 'Score',
+    'plugin.metrics_title'    => 'Metrics',
+    'plugin.issues_title'     => 'Issues',
+    'plugin.analysed_on'      => 'Analysed on',
 
     // Plugin detail — grade legend
     'plugin.grade_scale'      => 'Grade scale',

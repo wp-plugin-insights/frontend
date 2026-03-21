@@ -222,6 +222,14 @@ switch ($page) {
 
         $pageTitle    = $i18n->t('plugin.page_title', ['name' => $plugin['plugin_name'] ?? $slug]);
         $pageMetaDesc = $i18n->t('plugin.meta_desc', ['name' => $plugin['plugin_name'] ?? $slug]);
+
+        $analysisResults = [];
+        $pluginId        = isset($plugin['plugin_id']) ? (int) $plugin['plugin_id'] : 0;
+        $pluginVersion   = (string) ($plugin['plugin_version'] ?? '');
+        if ($resultRepo !== null && $pluginId > 0 && $pluginVersion !== '') {
+            $analysisResults = $resultRepo->getByPluginVersion($pluginId, $pluginVersion);
+        }
+
         require __DIR__ . '/templates/plugin.php';
         break;
 
@@ -423,6 +431,24 @@ switch ($page) {
         $uploadName  = (string) ($upload['plugin_name']    ?? $upload['plugin_slug'] ?? $uuid);
         $pageTitle   = $uploadName . ' — WP Plugin Insights';
         $pageMetaDesc = '';
+
+        // Load analysis results once the upload is processed
+        $analysisResults  = [];
+        $uploadSlug       = (string) ($upload['plugin_slug']    ?? '');
+        $uploadVersion    = (string) ($upload['plugin_version'] ?? '');
+        $uploadStatus     = (string) ($upload['upload_status']  ?? '');
+        if ($uploadStatus === 'done' && $uploadSlug !== '' && $uploadVersion !== ''
+            && $repo !== null && $resultRepo !== null
+        ) {
+            $uploadPlugin = $repo->findBySlug($uploadSlug);
+            if ($uploadPlugin !== null) {
+                $analysisResults = $resultRepo->getByPluginVersion(
+                    (int) $uploadPlugin['plugin_id'],
+                    $uploadVersion
+                );
+            }
+        }
+
         require __DIR__ . '/templates/plugin-upload.php';
         break;
 
@@ -467,7 +493,7 @@ switch ($page) {
                     $settingRepo->set('api_hostname', $apiHostname);
                 }
                 $settingRepo->set('api_active', $apiActive);
-                redirect('/admin/?success=api_settings');
+                redirect('/admin/?success=api_settings&tab=settings');
             }
 
             // ── Runner: toggle active ────────────────────────────────────
@@ -477,7 +503,7 @@ switch ($page) {
                 if ($runnerId > 0) {
                     $runnerRepo->setActive($runnerId, $active);
                 }
-                redirect('/admin/?success=runner_toggle');
+                redirect('/admin/?success=runner_toggle&tab=pipeline');
             }
 
             // ── Runner: add ──────────────────────────────────────────────
@@ -490,7 +516,7 @@ switch ($page) {
                 if ($rName !== '' && $rSlug !== '' && $rQueue !== '') {
                     try {
                         $runnerRepo->create($rName, $rSlug, $rQueue);
-                        redirect('/admin/?success=runner_add');
+                        redirect('/admin/?success=runner_add&tab=pipeline');
                     } catch (\RuntimeException) {
                         $adminError = 'A runner with that slug already exists.';
                     }
@@ -505,7 +531,7 @@ switch ($page) {
                 if ($runnerId > 0) {
                     $runnerRepo->delete($runnerId);
                 }
-                redirect('/admin/?success=runner_delete');
+                redirect('/admin/?success=runner_delete&tab=pipeline');
             }
 
             // ── User admin: toggle ───────────────────────────────────────
@@ -517,7 +543,7 @@ switch ($page) {
                 if ($targetId > 0 && $targetId !== (int) ($auth->currentUser()['user_id'] ?? 0)) {
                     $userRepo->setAdmin($targetId, $isAdmin);
                 }
-                $returnUrl = '/admin/?success=user_admin';
+                $returnUrl = '/admin/?success=user_admin&tab=settings';
                 if ($searchReturn !== '') {
                     $returnUrl .= '&user_search=' . urlencode($searchReturn);
                 }
@@ -544,8 +570,39 @@ switch ($page) {
         $runnerStats   = $resultRepo?->getRunnerSummary() ?? [];
         $recentResults = $resultRepo?->getRecent(20)      ?? [];
 
-        // Recent API uploads
+        // Platform stats (plugin/version/analysis counts)
+        $platformStats  = $repo?->getStats()                 ?? ['plugin_count' => 0, 'version_count' => 0];
+        $analysisStats  = $resultRepo?->getAnalysisStats()   ?? ['analyzed_plugins' => 0, 'total_results' => 0];
+
+        // Recent API uploads + grade enrichment
         $recentUploads = $uploadRepo?->getRecent(20) ?? [];
+
+        // Build slug:version pairs for done uploads to fetch grades in one query
+        $uploadGrades = [];
+        if ($resultRepo !== null && !empty($recentUploads)) {
+            $pairs = [];
+            foreach ($recentUploads as $up) {
+                if ((string) ($up['upload_status'] ?? '') === 'done'
+                    && (string) ($up['plugin_slug']    ?? '') !== ''
+                    && (string) ($up['plugin_version'] ?? '') !== ''
+                ) {
+                    $pairs[] = [
+                        'slug'    => (string) $up['plugin_slug'],
+                        'version' => (string) $up['plugin_version'],
+                    ];
+                }
+            }
+            if (!empty($pairs)) {
+                $uploadGrades = $resultRepo->getGradesBySlugVersions($pairs);
+            }
+        }
+
+        // Plugin search
+        $pluginSearchTerm    = trim((string) ($_GET['plugin_search'] ?? ''));
+        $pluginSearchResults = [];
+        if ($pluginSearchTerm !== '' && $repo !== null) {
+            $pluginSearchResults = $repo->searchBySlug($pluginSearchTerm);
+        }
 
         // User search
         $userSearchTerm    = trim((string) ($_GET['user_search'] ?? ''));
