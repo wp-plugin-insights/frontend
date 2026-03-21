@@ -20,6 +20,26 @@ $tested      = (string) ($plugin['plugin_tested']       ?? '');
 $requiresPhp = (string) ($plugin['plugin_requires_php'] ?? '');
 $lastUpdated = (string) ($plugin['plugin_last_updated'] ?? '');
 $added       = (string) ($plugin['plugin_added']        ?? '');
+$source      = (string) ($plugin['plugin_source']       ?? '');
+$shortDesc   = (string) ($plugin['plugin_short_description'] ?? '');
+
+// Author: stored as HTML (<a href="...">Name</a>); extract plain name + use profile URL
+$authorHtml    = (string) ($plugin['plugin_author']         ?? '');
+$authorName    = strip_tags($authorHtml);
+$authorProfile = (string) ($plugin['plugin_author_profile'] ?? '');
+// Only use the profile URL if it's a safe HTTPS link
+if ($authorProfile !== '' && !str_starts_with($authorProfile, 'https://')) {
+    $authorProfile = '';
+}
+
+// Icons: JSON object with keys like 'svg', '1x', '2x', 'default'
+$iconsRaw = (string) ($plugin['plugin_icons'] ?? '');
+$icons    = $iconsRaw !== '' ? json_decode($iconsRaw, true) : null;
+$icons    = is_array($icons) ? $icons : [];
+$iconUrl  = (string) ($icons['svg'] ?? $icons['1x'] ?? $icons['2x'] ?? $icons['default'] ?? '');
+if ($iconUrl !== '' && !str_starts_with($iconUrl, 'https://')) {
+    $iconUrl = '';
+}
 
 // Decode plugin dependencies (stored as JSON array)
 $depsRaw = (string) ($plugin['plugin_requires_plugins'] ?? '[]');
@@ -64,15 +84,29 @@ if ($lastUpdated !== '') {
     <div class="card">
         <div class="card-body">
             <div class="d-flex align-items-start gap-3 flex-wrap">
+                <?php if ($iconUrl !== '') : ?>
+                <img src="<?= htmlspecialchars($iconUrl, ENT_QUOTES, 'UTF-8') ?>"
+                     alt=""
+                     width="80"
+                     height="80"
+                     class="rounded-2 flex-shrink-0"
+                     loading="lazy"
+                     aria-hidden="true">
+                <?php endif; ?>
                 <div class="flex-grow-1">
                     <h1 class="h3 fw-bold mb-1">
                         <?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>
                     </h1>
-                    <div class="mb-2">
+                    <div class="mb-1">
                         <code class="plugin-slug text-body-secondary">
                             <?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>
                         </code>
                     </div>
+                    <?php if ($shortDesc !== '') : ?>
+                    <p class="text-body-secondary small mb-2">
+                        <?= htmlspecialchars($shortDesc, ENT_QUOTES, 'UTF-8') ?>
+                    </p>
+                    <?php endif; ?>
                     <div class="d-flex flex-wrap gap-3 text-body-secondary small">
                         <?php if ($version !== '') : ?>
                         <span>
@@ -101,6 +135,30 @@ if ($lastUpdated !== '') {
                             <i class="bi bi-people me-1" aria-hidden="true"></i>
                             <?= htmlspecialchars($i18n->number($installs), ENT_QUOTES, 'UTF-8') ?>+
                             <?= htmlspecialchars($i18n->t('plugin.active_installs'), ENT_QUOTES, 'UTF-8') ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if ($authorName !== '') : ?>
+                        <span>
+                            <i class="bi bi-person me-1" aria-hidden="true"></i>
+                            <?= htmlspecialchars($i18n->t('plugin.author'), ENT_QUOTES, 'UTF-8') ?>:
+                            <?php if ($authorProfile !== '') : ?>
+                            <a href="<?= htmlspecialchars($authorProfile, ENT_QUOTES, 'UTF-8') ?>"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="text-decoration-none"
+                               aria-label="<?= htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?> (opens in new tab)">
+                                <?= htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
+                            </a>
+                            <?php else : ?>
+                                <?= htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
+                            <?php endif; ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if ($source !== '') : ?>
+                        <span>
+                            <i class="bi bi-database me-1" aria-hidden="true"></i>
+                            <?= htmlspecialchars($i18n->t('plugin.source'), ENT_QUOTES, 'UTF-8') ?>:
+                            <?= htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>
                         </span>
                         <?php endif; ?>
                         <a href="https://wordpress.org/plugins/<?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>/"

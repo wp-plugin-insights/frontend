@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konto ráhkaduvvon. Dál sáhtát sisabođet.',
     'auth.login_register'             => 'Ráhkat konto',
     'auth.login_new_here'             => 'Ođđa dás?',
+    'plugin.author' => 'Dahkki',
+    'plugin.source' => 'Gáldu',
 ];

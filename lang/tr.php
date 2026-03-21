@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Hesap oluşturuldu. Artık giriş yapabilirsiniz.',
     'auth.login_register'             => 'Hesap oluştur',
     'auth.login_new_here'             => 'Yeni misiniz?',
+    'plugin.author' => 'Yazar',
+    'plugin.source' => 'Kaynak',
 ];

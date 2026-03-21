@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konto loodud. Nüüd saate sisse logida.',
     'auth.login_register'             => 'Loo konto',
     'auth.login_new_here'             => 'Uus siin?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Allikas',
 ];

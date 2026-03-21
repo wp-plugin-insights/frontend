@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Tili luotu. Voit nyt kirjautua sisään.',
     'auth.login_register'             => 'Luo tili',
     'auth.login_new_here'             => 'Uusi täällä?',
+    'plugin.author' => 'Tekijä',
+    'plugin.source' => 'Lähde',
 ];

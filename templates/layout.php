@@ -107,7 +107,7 @@
                             <a class="dropdown-item<?= $i18n->locale() === $code ? ' active' : '' ?>"
                                role="menuitem"
                                href="?lang=<?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?>"
-                               <?= $i18n->locale() === $code ? 'aria-current="true"' : '' ?>>
+                                <?= $i18n->locale() === $code ? 'aria-current="true"' : '' ?>>
                                 <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
                             </a>
                             <?php endforeach; ?>

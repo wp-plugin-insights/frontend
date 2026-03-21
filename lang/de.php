@@ -109,4 +109,6 @@ return [
     'auth.register_success'           => 'Konto erstellt. Sie können sich jetzt anmelden.',
     'auth.login_register'             => 'Konto erstellen',
     'auth.login_new_here'             => 'Neu hier?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Quelle',
 ];

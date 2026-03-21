@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konto skapat. Du kan nu logga in.',
     'auth.login_register'             => 'Skapa konto',
     'auth.login_new_here'             => 'Ny här?',
+    'plugin.author' => 'Författare',
+    'plugin.source' => 'Källa',
 ];

@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Conta criada. Já pode entrar.',
     'auth.login_register'             => 'Criar conta',
     'auth.login_new_here'             => 'Novo aqui?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Fonte',
 ];

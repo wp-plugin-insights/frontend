@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Paskyra sukurta. Dabar galite prisijungti.',
     'auth.login_register'             => 'Sukurti paskyrą',
     'auth.login_new_here'             => 'Čia pirmą kartą?',
+    'plugin.author' => 'Autorius',
+    'plugin.source' => 'Šaltinis',
 ];

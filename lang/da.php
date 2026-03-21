@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konto oprettet. Du kan nu logge ind.',
     'auth.login_register'             => 'Opret konto',
     'auth.login_new_here'             => 'Ny her?',
+    'plugin.author' => 'Forfatter',
+    'plugin.source' => 'Kilde',
 ];

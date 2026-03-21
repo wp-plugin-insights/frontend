@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Обліковий запис створено. Тепер ви можете увійти.',
     'auth.login_register'             => 'Створити обліковий запис',
     'auth.login_new_here'             => 'Вперше тут?',
+    'plugin.author' => 'Автор',
+    'plugin.source' => 'Джерело',
 ];

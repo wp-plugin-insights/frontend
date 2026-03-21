@@ -109,4 +109,6 @@ return [
     'auth.register_success'           => 'Account aangemaakt. U kunt nu inloggen.',
     'auth.login_register'             => 'Account aanmaken',
     'auth.login_new_here'             => 'Nieuw hier?',
+    'plugin.author' => 'Auteur',
+    'plugin.source' => 'Bron',
 ];

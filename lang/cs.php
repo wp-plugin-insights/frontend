@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Účet vytvořen. Nyní se můžete přihlásit.',
     'auth.login_register'             => 'Vytvořit účet',
     'auth.login_new_here'             => 'Jste tu poprvé?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Zdroj',
 ];

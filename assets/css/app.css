@@ -67,6 +67,14 @@
     box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .15);
 }
 
+/* ── Plugin short description (2-line clamp) ─────────────── */
+.plugin-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 /* ── Analysis card toggle button ─────────────────────────── */
 .card-header-btn {
     display: flex;

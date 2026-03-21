@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Compte creat. Ara podeu iniciar sessió.',
     'auth.login_register'             => 'Crear compte',
     'auth.login_new_here'             => 'Sou nou aquí?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Font',
 ];

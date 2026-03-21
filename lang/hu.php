@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Fiók létrehozva. Most már bejelentkezhet.',
     'auth.login_register'             => 'Fiók létrehozása',
     'auth.login_new_here'             => 'Új itt?',
+    'plugin.author' => 'Szerző',
+    'plugin.source' => 'Forrás',
 ];

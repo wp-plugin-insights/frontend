@@ -62,17 +62,25 @@ declare(strict_types=1);
     <?php else : ?>
     <div class="row g-3">
         <?php foreach ($plugins as $p) : ?>
-        <?php
-        $pSlug = htmlspecialchars($p['plugin_slug'], ENT_QUOTES, 'UTF-8');
-        $pName = htmlspecialchars($p['plugin_name'] ?? $p['plugin_slug'], ENT_QUOTES, 'UTF-8');
-        ?>
+            <?php
+            $pSlug     = htmlspecialchars($p['plugin_slug'], ENT_QUOTES, 'UTF-8');
+            $pName     = htmlspecialchars($p['plugin_name'] ?? $p['plugin_slug'], ENT_QUOTES, 'UTF-8');
+            $pDesc     = htmlspecialchars((string) ($p['plugin_short_description'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $pIconsRaw = (string) ($p['plugin_icons'] ?? '');
+            $pIcons    = $pIconsRaw !== '' ? json_decode($pIconsRaw, true) : null;
+            $pIcons    = is_array($pIcons) ? $pIcons : [];
+            $pIconUrl  = (string) ($pIcons['svg'] ?? $pIcons['1x'] ?? $pIcons['default'] ?? '');
+            if ($pIconUrl !== '' && !str_starts_with($pIconUrl, 'https://')) {
+                $pIconUrl = '';
+            }
+            ?>
         <div class="col-12 col-sm-6 col-lg-4">
             <a href="/plugin/<?= $pSlug ?>/"
                class="card plugin-card text-decoration-none h-100"
                aria-label="<?= $pName ?> (<?= $pSlug ?>)">
                 <div class="card-body">
                     <div class="d-flex align-items-start justify-content-between mb-2">
-                        <div class="overflow-hidden">
+                        <div class="overflow-hidden flex-grow-1">
                             <div class="fw-semibold text-truncate" aria-hidden="true">
                                 <?= $pName ?>
                             </div>
@@ -80,7 +88,21 @@ declare(strict_types=1);
                                 <?= $pSlug ?>
                             </code>
                         </div>
+                        <?php if ($pIconUrl !== '') : ?>
+                        <img src="<?= htmlspecialchars($pIconUrl, ENT_QUOTES, 'UTF-8') ?>"
+                             alt=""
+                             width="40"
+                             height="40"
+                             class="rounded-1 ms-2 flex-shrink-0"
+                             loading="lazy"
+                             aria-hidden="true">
+                        <?php endif; ?>
                     </div>
+                    <?php if ($pDesc !== '') : ?>
+                    <p class="text-body-secondary small plugin-desc mb-2" aria-hidden="true">
+                        <?= $pDesc ?>
+                    </p>
+                    <?php endif; ?>
                     <div class="text-body-secondary small mt-auto">
                         <?php if (!empty($p['plugin_last_updated'])) : ?>
                             <?= htmlspecialchars($i18n->t('home.updated_on'), ENT_QUOTES, 'UTF-8') ?>

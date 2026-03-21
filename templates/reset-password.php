@@ -21,7 +21,6 @@ use PluginInsight\Csrf;
     <h1 class="fw-bold mb-4"><?= htmlspecialchars($i18n->t('auth.reset_heading'), ENT_QUOTES, 'UTF-8') ?></h1>
 
     <?php if ($success ?? false) : ?>
-
     <div class="alert alert-success" role="status">
         <?= htmlspecialchars($i18n->t('auth.reset_success'), ENT_QUOTES, 'UTF-8') ?>
     </div>
@@ -30,7 +29,6 @@ use PluginInsight\Csrf;
     </p>
 
     <?php elseif (($resetRow ?? null) === null) : ?>
-
     <div class="alert alert-danger" role="alert">
         <?= htmlspecialchars($i18n->t('auth.reset_invalid'), ENT_QUOTES, 'UTF-8') ?>
     </div>
@@ -41,20 +39,19 @@ use PluginInsight\Csrf;
     </p>
 
     <?php else : ?>
-
-    <?php
-    $errorMsg = match ($error ?? null) {
-        'mismatch'  => $i18n->t('auth.reset_mismatch'),
-        'too_short' => $i18n->t('auth.reset_too_short'),
-        default     => null,
-    };
+        <?php
+        $errorMsg = match ($error ?? null) {
+            'mismatch'  => $i18n->t('auth.reset_mismatch'),
+            'too_short' => $i18n->t('auth.reset_too_short'),
+            default     => null,
+        };
     ?>
 
-    <?php if ($errorMsg !== null) : ?>
+        <?php if ($errorMsg !== null) : ?>
     <div class="alert alert-danger" role="alert">
-        <?= htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8') ?>
+            <?= htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8') ?>
     </div>
-    <?php endif; ?>
+        <?php endif; ?>
 
     <form method="post" action="/reset-password/" novalidate>
         <?= Csrf::field() ?>

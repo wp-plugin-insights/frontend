@@ -18,13 +18,11 @@ use PluginInsight\Csrf;
     <h1 class="fw-bold mb-2"><?= htmlspecialchars($i18n->t('auth.forgot_heading'), ENT_QUOTES, 'UTF-8') ?></h1>
 
     <?php if ($sent ?? false) : ?>
-
     <div class="alert alert-success" role="status">
         <?= htmlspecialchars($i18n->t('auth.forgot_sent'), ENT_QUOTES, 'UTF-8') ?>
     </div>
 
     <?php else : ?>
-
     <p class="text-body-secondary mb-4">
         <?= htmlspecialchars($i18n->t('auth.forgot_desc'), ENT_QUOTES, 'UTF-8') ?>
     </p>

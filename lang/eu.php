@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Kontua sortuta. Orain saioa has dezakezu.',
     'auth.login_register'             => 'Sortu kontua',
     'auth.login_new_here'             => 'Berria hemen?',
+    'plugin.author' => 'Egilea',
+    'plugin.source' => 'Iturria',
 ];

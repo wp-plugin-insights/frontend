@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Cont creat. Acum vă puteți conecta.',
     'auth.login_register'             => 'Creați cont',
     'auth.login_new_here'             => 'Nou aici?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Sursă',
 ];

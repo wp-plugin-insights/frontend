@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Kont maħluq. Issa tista\' tidħol.',
     'auth.login_register'             => 'Oħloq kont',
     'auth.login_new_here'             => 'Ġdid hawnhekk?',
+    'plugin.author' => 'Awtur',
+    'plugin.source' => 'Sors',
 ];

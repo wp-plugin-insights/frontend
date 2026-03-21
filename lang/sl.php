@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Račun ustvarjen. Zdaj se lahko prijavite.',
     'auth.login_register'             => 'Ustvari račun',
     'auth.login_new_here'             => 'Novi tukaj?',
+    'plugin.author' => 'Avtor',
+    'plugin.source' => 'Vir',
 ];

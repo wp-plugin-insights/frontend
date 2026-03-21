@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Ο λογαριασμός δημιουργήθηκε. Μπορείτε τώρα να συνδεθείτε.',
     'auth.login_register'             => 'Δημιουργία λογαριασμού',
     'auth.login_new_here'             => 'Νέος εδώ;',
+    'plugin.author' => 'Συγγραφέας',
+    'plugin.source' => 'Πηγή',
 ];

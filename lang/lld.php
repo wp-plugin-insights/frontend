@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Cont crià. Pudëis rentrè dagnora.',
     'auth.login_register'             => 'Creer n cont',
     'auth.login_new_here'             => 'Nuef chi?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Funtana',
 ];

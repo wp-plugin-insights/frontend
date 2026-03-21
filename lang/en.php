@@ -66,6 +66,9 @@ return [
     'plugin.grade_f'          => 'Failing',
     'plugin.grade_pending'    => 'Pending',
 
+    'plugin.author'           => 'Author',
+    'plugin.source'           => 'Source',
+
     // Plugin not found
     'plugin.not_found_title'  => 'Plugin not found',
     'plugin.not_found_heading' => 'Plugin not found',

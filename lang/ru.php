@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Аккаунт создан. Теперь вы можете войти.',
     'auth.login_register'             => 'Создать аккаунт',
     'auth.login_new_here'             => 'Впервые здесь?',
+    'plugin.author' => 'Автор',
+    'plugin.source' => 'Источник',
 ];

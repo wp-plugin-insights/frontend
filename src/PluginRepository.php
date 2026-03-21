@@ -28,7 +28,9 @@ class PluginRepository
                     plugin_zip, plugin_requires, plugin_tested, plugin_requires_php,
                     plugin_requires_plugins, plugin_rating, plugin_num_ratings,
                     plugin_support_threads, plugin_support_threads_resolved,
-                    plugin_downloaded, plugin_last_updated, plugin_added, plugin_source
+                    plugin_downloaded, plugin_last_updated, plugin_added, plugin_source,
+                    plugin_author, plugin_author_profile,
+                    plugin_short_description, plugin_icons
              FROM plugin
              WHERE plugin_slug = ?
              LIMIT 1'
@@ -52,7 +54,8 @@ class PluginRepository
     {
         $stmt = $this->db->prepare(
             'SELECT plugin_slug, plugin_name, plugin_version,
-                    plugin_installs, plugin_downloaded, plugin_last_updated
+                    plugin_installs, plugin_downloaded, plugin_last_updated,
+                    plugin_icons, plugin_short_description
              FROM plugin
              WHERE plugin_name IS NOT NULL AND plugin_name != \'\'
              ORDER BY plugin_last_updated DESC

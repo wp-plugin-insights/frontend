@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konto erstellt. Dir kënnt Iech elo aloggen.',
     'auth.login_register'             => 'Konto erstellen',
     'auth.login_new_here'             => 'Nei hei?',
+    'plugin.author' => 'Auteur',
+    'plugin.source' => 'Quell',
 ];

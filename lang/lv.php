@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Konts izveidots. Tagad varat pierakstīties.',
     'auth.login_register'             => 'Izveidot kontu',
     'auth.login_new_here'             => 'Jauns šeit?',
+    'plugin.author' => 'Autors',
+    'plugin.source' => 'Avots',
 ];

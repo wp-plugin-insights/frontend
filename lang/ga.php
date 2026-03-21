@@ -90,4 +90,6 @@ return [
     'auth.register_success'           => 'Cuntas cruthaithe. Is féidir leat logáil isteach anois.',
     'auth.login_register'             => 'Cruthaigh cuntas',
     'auth.login_new_here'             => 'Nua anseo?',
+    'plugin.author' => 'Údar',
+    'plugin.source' => 'Foinse',
 ];

@@ -109,4 +109,6 @@ return [
     'auth.register_success'           => 'Cuenta creada. Ya puedes iniciar sesión.',
     'auth.login_register'             => 'Crear cuenta',
     'auth.login_new_here'             => '¿Nuevo aquí?',
+    'plugin.author' => 'Autor',
+    'plugin.source' => 'Fuente',
 ];
