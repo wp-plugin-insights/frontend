@@ -156,6 +156,16 @@ class Auth
     }
 
     /**
+     * Returns true if the current user has the admin flag set.
+     */
+    public function isAdmin(): bool
+    {
+        $user = $this->currentUser();
+
+        return $user !== null && (int) ($user['user_is_admin'] ?? 0) === 1;
+    }
+
+    /**
      * Returns the best client IP address for rate limiting.
      *
      * Note: X-Forwarded-For is used only if the request comes from a trusted

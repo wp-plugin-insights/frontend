@@ -19,13 +19,22 @@ require_once __DIR__ . '/src/Auth.php';
 require_once __DIR__ . '/src/PasswordReset.php';
 require_once __DIR__ . '/src/Csrf.php';
 require_once __DIR__ . '/../secrets.php';
+require_once __DIR__ . '/../crons/src/UploadRepository.php';
+require_once __DIR__ . '/src/SiteSettingRepository.php';
+require_once __DIR__ . '/src/RunnerRepository.php';
+require_once __DIR__ . '/src/RabbitMqInfo.php';
+require_once __DIR__ . '/src/PluginResultRepository.php';
 
 use PluginInsight\Auth;
 use PluginInsight\Csrf;
 use PluginInsight\I18n;
 use PluginInsight\PasswordReset;
 use PluginInsight\PluginRepository;
+use PluginInsight\PluginResultRepository;
+use PluginInsight\RabbitMqInfo;
 use PluginInsight\Router;
+use PluginInsight\RunnerRepository;
+use PluginInsight\SiteSettingRepository;
 use PluginInsight\UserRepository;
 
 Auth::startSession();
@@ -40,14 +49,26 @@ $userRepo = null;
 $auth = null;
 /** @var PasswordReset|null $passwordReset */
 $passwordReset = null;
+/** @var UploadRepository|null $uploadRepo */
+$uploadRepo = null;
+/** @var SiteSettingRepository|null $settingRepo */
+$settingRepo = null;
+/** @var RunnerRepository|null $runnerRepo */
+$runnerRepo = null;
+/** @var PluginResultRepository|null $resultRepo */
+$resultRepo = null;
 
 try {
     require_once __DIR__ . '/../dbcon.php';
     /** @var \mysqli $db */
-    $userRepo     = new UserRepository($db);
-    $repo         = new PluginRepository($db);
-    $auth         = new Auth($userRepo);
+    $userRepo      = new UserRepository($db);
+    $repo          = new PluginRepository($db);
+    $auth          = new Auth($userRepo);
     $passwordReset = new PasswordReset($userRepo);
+    $uploadRepo    = new UploadRepository($db);
+    $settingRepo   = new SiteSettingRepository($db);
+    $runnerRepo    = new RunnerRepository($db);
+    $resultRepo    = new PluginResultRepository($db);
 } catch (\RuntimeException $e) {
     error_log('[plugininsight] DB connection failed: ' . $e->getMessage());
 }
@@ -152,6 +173,16 @@ function requireAuth(?Auth $auth): void
     if ($auth === null || !$auth->isLoggedIn()) {
         redirect('/login/');
     }
+}
+
+// ── Helper: HTML escaping ─────────────────────────────────────────────────────
+
+/**
+ * Shorthand for htmlspecialchars with safe defaults.
+ */
+function esc(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
@@ -375,6 +406,157 @@ switch ($page) {
         $pageTitle  = $i18n->t('auth.account_title');
         $activePage = 'account';
         require __DIR__ . '/templates/account.php';
+        break;
+
+    // ── Public: uploaded plugin result ──────────────────────────────────────
+    case 'plugin-upload':
+        $uuid   = $params['uuid'];
+        $upload = $uploadRepo?->findByUuid($uuid);
+
+        if ($upload === null) {
+            http_response_code(404);
+            $pageTitle = $i18n->t('404.page_title');
+            require __DIR__ . '/templates/404.php';
+            break;
+        }
+
+        $uploadName  = (string) ($upload['plugin_name']    ?? $upload['plugin_slug'] ?? $uuid);
+        $pageTitle   = $uploadName . ' — WP Plugin Insights';
+        $pageMetaDesc = '';
+        require __DIR__ . '/templates/plugin-upload.php';
+        break;
+
+    // ── Admin panel ─────────────────────────────────────────────────────────
+    case 'admin':
+        if ($auth === null || !$auth->isLoggedIn()) {
+            redirect('/login/');
+        }
+
+        if (!$auth->isAdmin()) {
+            http_response_code(403);
+            $pageTitle  = 'Access Denied — WP Plugin Insights';
+            $activePage = '';
+            ?>
+            <main class="container py-5 text-center" style="max-width:480px">
+                <h1 class="h3 fw-bold mb-3">
+                    <i class="bi bi-shield-x me-2" aria-hidden="true"></i>Access Denied
+                </h1>
+                <p class="text-body-secondary">You do not have permission to access this page.</p>
+                <a href="/" class="btn btn-primary">Back to home</a>
+            </main>
+            <?php
+            break;
+        }
+
+        $adminSuccess = isset($_GET['success']) ? (string) $_GET['success'] : null;
+        $adminError   = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/admin/');
+            }
+
+            $action = (string) ($_POST['action'] ?? '');
+
+            // ── API Settings ─────────────────────────────────────────────
+            if ($action === 'api_settings' && $settingRepo !== null) {
+                $apiActive   = isset($_POST['api_active']) ? '1' : '0';
+                $apiHostname = trim((string) ($_POST['api_hostname'] ?? ''));
+                $apiHostname = preg_replace('/[^a-zA-Z0-9._\-]/', '', $apiHostname) ?? '';
+                if ($apiHostname !== '') {
+                    $settingRepo->set('api_hostname', $apiHostname);
+                }
+                $settingRepo->set('api_active', $apiActive);
+                redirect('/admin/?success=api_settings');
+            }
+
+            // ── Runner: toggle active ────────────────────────────────────
+            if ($action === 'runner_toggle' && $runnerRepo !== null) {
+                $runnerId = (int) ($_POST['runner_id'] ?? 0);
+                $active   = (int) ($_POST['runner_is_active'] ?? 0) === 1;
+                if ($runnerId > 0) {
+                    $runnerRepo->setActive($runnerId, $active);
+                }
+                redirect('/admin/?success=runner_toggle');
+            }
+
+            // ── Runner: add ──────────────────────────────────────────────
+            if ($action === 'runner_add' && $runnerRepo !== null) {
+                $rName  = trim((string) ($_POST['runner_name']  ?? ''));
+                $rSlug  = trim((string) ($_POST['runner_slug']  ?? ''));
+                $rQueue = trim((string) ($_POST['runner_queue'] ?? ''));
+                $rSlug  = preg_replace('/[^a-z0-9_\-]/', '', strtolower($rSlug)) ?? '';
+
+                if ($rName !== '' && $rSlug !== '' && $rQueue !== '') {
+                    try {
+                        $runnerRepo->create($rName, $rSlug, $rQueue);
+                        redirect('/admin/?success=runner_add');
+                    } catch (\RuntimeException) {
+                        $adminError = 'A runner with that slug already exists.';
+                    }
+                } else {
+                    $adminError = 'Name, slug, and queue are all required.';
+                }
+            }
+
+            // ── Runner: delete ───────────────────────────────────────────
+            if ($action === 'runner_delete' && $runnerRepo !== null) {
+                $runnerId = (int) ($_POST['runner_id'] ?? 0);
+                if ($runnerId > 0) {
+                    $runnerRepo->delete($runnerId);
+                }
+                redirect('/admin/?success=runner_delete');
+            }
+
+            // ── User admin: toggle ───────────────────────────────────────
+            if ($action === 'user_admin' && $userRepo !== null) {
+                $targetId    = (int) ($_POST['user_id']           ?? 0);
+                $isAdmin     = (int) ($_POST['user_is_admin']     ?? 0) === 1;
+                $searchReturn = trim((string) ($_POST['user_search_return'] ?? ''));
+                // Prevent self-demotion
+                if ($targetId > 0 && $targetId !== (int) ($auth->currentUser()['user_id'] ?? 0)) {
+                    $userRepo->setAdmin($targetId, $isAdmin);
+                }
+                $returnUrl = '/admin/?success=user_admin';
+                if ($searchReturn !== '') {
+                    $returnUrl .= '&user_search=' . urlencode($searchReturn);
+                }
+                redirect($returnUrl);
+            }
+        }
+
+        // ── Load data for rendering ──────────────────────────────────────
+        $settings = $settingRepo?->getAll() ?? [];
+        $runners  = $runnerRepo?->findAll()  ?? [];
+
+        // RabbitMQ exchanges + queues (optional; requires management plugin + rabbitmq.php)
+        $exchanges    = [];
+        $queues       = [];
+        $rabbitConfig = __DIR__ . '/../crons/rabbitmq.php';
+        if (file_exists($rabbitConfig)) {
+            require_once $rabbitConfig;
+            $rabbitInfo = new RabbitMqInfo(RABBITMQ_HOST, RABBITMQ_USER, RABBITMQ_PASS);
+            $exchanges  = $rabbitInfo->getExchanges();
+            $queues     = $rabbitInfo->getQueues();
+        }
+
+        // Analysis pipeline stats
+        $runnerStats   = $resultRepo?->getRunnerSummary() ?? [];
+        $recentResults = $resultRepo?->getRecent(20)      ?? [];
+
+        // Recent API uploads
+        $recentUploads = $uploadRepo?->getRecent(20) ?? [];
+
+        // User search
+        $userSearchTerm    = trim((string) ($_GET['user_search'] ?? ''));
+        $userSearchResults = [];
+        if ($userSearchTerm !== '' && $userRepo !== null) {
+            $userSearchResults = $userRepo->searchByEmail($userSearchTerm);
+        }
+
+        $pageTitle  = 'Admin — WP Plugin Insights';
+        $activePage = 'admin';
+        require __DIR__ . '/templates/admin.php';
         break;
 
     // ── Search redirect ──────────────────────────────────────────────────────

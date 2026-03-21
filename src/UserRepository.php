@@ -26,7 +26,7 @@ class UserRepository
     {
         $stmt = $this->db->prepare(
             'SELECT user_id, email, password_hash, display_name, preferred_lang,
-                    created_at, updated_at
+                    user_is_admin, created_at, updated_at
              FROM `user`
              WHERE LOWER(email) = LOWER(?)
              LIMIT 1'
@@ -50,7 +50,7 @@ class UserRepository
     {
         $stmt = $this->db->prepare(
             'SELECT user_id, email, password_hash, display_name, preferred_lang,
-                    created_at, updated_at
+                    user_is_admin, created_at, updated_at
              FROM `user`
              WHERE user_id = ?
              LIMIT 1'
@@ -141,6 +141,51 @@ class UserRepository
         );
 
         $stmt->bind_param('si', $validated, $userId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    // ── Admin management ─────────────────────────────────────────────────────
+
+    /**
+     * Returns up to 20 users whose e-mail address contains $term.
+     * Results are ordered by e-mail.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function searchByEmail(string $term): array
+    {
+        $like = '%' . $term . '%';
+        $stmt = $this->db->prepare(
+            'SELECT user_id, email, display_name, user_is_admin, created_at
+             FROM `user`
+             WHERE email LIKE ?
+             ORDER BY email
+             LIMIT 20'
+        );
+        $stmt->bind_param('s', $like);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $rows   = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        $stmt->close();
+
+        return $rows;
+    }
+
+    /**
+     * Grants or revokes the admin flag for a user.
+     */
+    public function setAdmin(int $userId, bool $isAdmin): void
+    {
+        $val  = $isAdmin ? 1 : 0;
+        $stmt = $this->db->prepare(
+            'UPDATE `user` SET user_is_admin = ? WHERE user_id = ?'
+        );
+        $stmt->bind_param('ii', $val, $userId);
         $stmt->execute();
         $stmt->close();
     }

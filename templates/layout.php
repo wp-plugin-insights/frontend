@@ -30,6 +30,12 @@
             ><?= htmlspecialchars($i18n->t('nav.about'), ENT_QUOTES, 'UTF-8') ?></a>
 
             <?php if (!empty($currentUser)) : ?>
+            <?php if (!empty($currentUser['user_is_admin'])) : ?>
+            <a href="/admin/"
+               class="nav-link px-2<?= $activePage === 'admin' ? ' active" aria-current="page' : '' ?>">
+                <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Admin
+            </a>
+            <?php endif; ?>
             <a href="/account/"
                class="nav-link px-2<?= $activePage === 'account' ? ' active" aria-current="page' : '' ?>">
                 <?= htmlspecialchars($i18n->t('nav.account'), ENT_QUOTES, 'UTF-8') ?>

@@ -16,3 +16,9 @@ parameters:
         - src/Auth.php
         - src/PasswordReset.php
         - src/Csrf.php
+        - ../crons/src/UploadRepository.php
+        - ../crons/rabbitmq.php
+        - src/SiteSettingRepository.php
+        - src/RunnerRepository.php
+        - src/RabbitMqInfo.php
+        - src/PluginResultRepository.php
