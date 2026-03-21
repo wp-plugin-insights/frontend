@@ -106,12 +106,21 @@ class PasswordReset
 
     /**
      * Sends the password-reset e-mail to the user.
+     *
+     * Validates the address with filter_var to guard against header injection.
+     * Strips any CR/LF from the subject line for the same reason.
      */
     private function sendEmail(string $to, string $rawToken): void
     {
+        // Reject addresses that could enable header injection
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
         $url = APP_URL . '/reset-password/?token=' . rawurlencode($rawToken);
 
-        $subject = 'Reset your PluginInsight password';
+        // Strip CR/LF from subject to prevent header injection
+        $subject = str_replace(["\r", "\n"], '', 'Reset your PluginInsight password');
 
         $body  = "You requested a password reset for your PluginInsight account.\n\n";
         $body .= "Click the link below to set a new password (valid for 1 hour):\n\n";

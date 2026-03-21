@@ -157,4 +157,16 @@ return [
     'auth.account_err_current_pw' => 'Current password is incorrect.',
     'auth.account_err_mismatch'   => 'Passwords do not match.',
     'auth.account_err_too_short'  => 'Password must be at least 12 characters.',
+
+    // Register
+    'auth.register_title'             => 'Create account — WP Plugin Insights',
+    'auth.register_heading'           => 'Create an account',
+    'auth.register_btn'               => 'Create account',
+    'auth.register_have_account'      => 'Already have an account?',
+    'auth.register_login_link'        => 'Log in',
+    'auth.register_err_email_taken'   => 'That e-mail address is already registered.',
+    'auth.register_err_invalid_email' => 'Please enter a valid e-mail address.',
+    'auth.register_success'           => 'Account created. You can now log in.',
+    'auth.login_register'             => 'Create account',
+    'auth.login_new_here'             => 'New here?',
 ];

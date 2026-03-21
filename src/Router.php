@@ -13,8 +13,15 @@ namespace PluginInsight;
  *
  * Supported routes:
  *   /                          → home
- *   /plugin/<slug>/            → plugin  (param: slug)
+ *   /plugin/<slug>/            → plugin          (param: slug)
+ *   /plugin/                   → search          (GET ?slug= redirects to /plugin/<slug>/)
  *   /about/                    → about
+ *   /login/                    → login
+ *   /logout/                   → logout          (POST only; GET → redirect /)
+ *   /forgot-password/          → forgot-password
+ *   /reset-password/           → reset-password
+ *   /account/                  → account         (auth required)
+ *   /register/                 → register
  *   <anything else>            → 404
  */
 class Router
@@ -30,18 +37,19 @@ class Router
         $path = strtok($uri, '?') ?: '/';
         $path = '/' . trim($path, '/');
 
-        if ($path === '/') {
-            return ['page' => 'home', 'params' => []];
-        }
-
-        if ($path === '/about') {
-            return ['page' => 'about', 'params' => []];
-        }
-
-        if (preg_match('#^/plugin/([a-z0-9][a-z0-9\-]{0,98})$#', $path, $m)) {
-            return ['page' => 'plugin', 'params' => ['slug' => $m[1]]];
-        }
-
-        return ['page' => '404', 'params' => []];
+        return match (true) {
+            $path === '/'                  => ['page' => 'home',             'params' => []],
+            $path === '/about'             => ['page' => 'about',            'params' => []],
+            $path === '/login'             => ['page' => 'login',            'params' => []],
+            $path === '/logout'            => ['page' => 'logout',           'params' => []],
+            $path === '/forgot-password'   => ['page' => 'forgot-password',  'params' => []],
+            $path === '/reset-password'    => ['page' => 'reset-password',   'params' => []],
+            $path === '/account'           => ['page' => 'account',          'params' => []],
+            $path === '/register'          => ['page' => 'register',         'params' => []],
+            $path === '/plugin'            => ['page' => 'search',           'params' => []],
+            (bool) preg_match('#^/plugin/([a-z0-9][a-z0-9\-]{0,98})$#', $path, $m)
+                                           => ['page' => 'plugin',           'params' => ['slug' => $m[1]]],
+            default                        => ['page' => '404',              'params' => []],
+        };
     }
 }

@@ -80,9 +80,10 @@ class UserRepository
         $stmt->bind_param('ss', $email, $passwordHash);
 
         if (!$stmt->execute()) {
-            $error = $stmt->error;
+            $detail = $stmt->error;
             $stmt->close();
-            throw new \RuntimeException('Failed to create user: ' . $error);
+            error_log('[plugininsight] UserRepository::create failed: ' . $detail);
+            throw new \RuntimeException('Failed to create user account. Please try again.');
         }
 
         $newId = (int) $this->db->insert_id;

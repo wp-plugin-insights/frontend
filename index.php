@@ -1,29 +1,74 @@
 <?php
 
+/**
+ * PluginInsight — front controller.
+ *
+ * Entry point for all requests (Apache RewriteRule → index.php).
+ * Handles session, routing, locale detection, DB, and template rendering.
+ */
+
 declare(strict_types=1);
+
+// ── Bootstrap — session must start before any output ─────────────────────────
 
 require_once __DIR__ . '/src/I18n.php';
 require_once __DIR__ . '/src/Router.php';
 require_once __DIR__ . '/src/PluginRepository.php';
+require_once __DIR__ . '/src/UserRepository.php';
+require_once __DIR__ . '/src/Auth.php';
+require_once __DIR__ . '/src/PasswordReset.php';
+require_once __DIR__ . '/src/Csrf.php';
+require_once __DIR__ . '/../secrets.php';
 
+use PluginInsight\Auth;
+use PluginInsight\Csrf;
 use PluginInsight\I18n;
-use PluginInsight\Router;
+use PluginInsight\PasswordReset;
 use PluginInsight\PluginRepository;
+use PluginInsight\Router;
+use PluginInsight\UserRepository;
+
+Auth::startSession();
+
+// ── Database connection ───────────────────────────────────────────────────────
+
+/** @var PluginRepository|null $repo */
+$repo = null;
+/** @var UserRepository|null $userRepo */
+$userRepo = null;
+/** @var Auth|null $auth */
+$auth = null;
+/** @var PasswordReset|null $passwordReset */
+$passwordReset = null;
+
+try {
+    require_once __DIR__ . '/../dbcon.php';
+    /** @var \mysqli $db */
+    $userRepo     = new UserRepository($db);
+    $repo         = new PluginRepository($db);
+    $auth         = new Auth($userRepo);
+    $passwordReset = new PasswordReset($userRepo);
+} catch (\RuntimeException $e) {
+    error_log('[plugininsight] DB connection failed: ' . $e->getMessage());
+}
 
 // ── Locale detection ──────────────────────────────────────────────────────────
 
 /**
- * Detects the preferred locale from (in order):
- *   1. ?lang= query parameter  (also sets a cookie for subsequent requests)
- *   2. pi_lang cookie
- *   3. Accept-Language HTTP header
- *   4. Default: 'en'
+ * Priority:
+ *   1. ?lang= query parameter  (explicit override; saves cookie)
+ *   2. Logged-in user's preferred_lang  (from DB via session)
+ *   3. pi_lang cookie
+ *   4. Accept-Language header
+ *   5. 'en' fallback
+ *
+ * @param array<string, mixed>|null $user
  */
-function detectLocale(): string
+function detectLocale(?array $user): string
 {
     $supported = I18n::SUPPORTED;
 
-    // 1. Explicit query parameter
+    // 1. Explicit ?lang= — also persists to cookie
     if (
         isset($_GET['lang'])
         && is_string($_GET['lang'])
@@ -38,7 +83,17 @@ function detectLocale(): string
         return $_GET['lang'];
     }
 
-    // 2. Cookie
+    // 2. Logged-in user preference
+    if (
+        $user !== null
+        && isset($user['preferred_lang'])
+        && is_string($user['preferred_lang'])
+        && in_array($user['preferred_lang'], $supported, true)
+    ) {
+        return $user['preferred_lang'];
+    }
+
+    // 3. Cookie
     if (
         isset($_COOKIE['pi_lang'])
         && is_string($_COOKIE['pi_lang'])
@@ -47,7 +102,7 @@ function detectLocale(): string
         return $_COOKIE['pi_lang'];
     }
 
-    // 3. Accept-Language header (match first two characters of each tag)
+    // 4. Accept-Language header (match first tag segment)
     $header = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
     foreach (explode(',', $header) as $part) {
         $lang = strtolower(substr(trim(strtok($part, ';')), 0, 2));
@@ -59,43 +114,52 @@ function detectLocale(): string
     return 'en';
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
+$currentUser = $auth?->currentUser();
+$locale      = detectLocale($currentUser);
+$i18n        = new I18n($locale);
 
-$locale = detectLocale();
-$i18n   = new I18n($locale);
+// ── Routing ───────────────────────────────────────────────────────────────────
+
 $router = new Router();
+$uri    = $_SERVER['REQUEST_URI'] ?? '/';
+$route  = $router->resolve($uri);
+$page   = $route['page'];
+$params = $route['params'];
 
-$uri   = $_SERVER['REQUEST_URI'] ?? '/';
-$route = $router->resolve($uri);
+$activePage   = $page;
+$pageTitle    = 'WP Plugin Insights';
+$pageMetaDesc = '';
+$pageContent  = '';
 
-$page       = $route['page'];
-$params     = $route['params'];
-$activePage = $page;
+// ── Helper: Post-Redirect-Get ─────────────────────────────────────────────────
 
-// ── Database connection ───────────────────────────────────────────────────────
-
-/** @var PluginRepository|null $repo */
-$repo = null;
-
-try {
-    require_once __DIR__ . '/../dbcon.php';
-    /** @var \mysqli $db */
-    $repo = new PluginRepository($db);
-} catch (\RuntimeException $e) {
-    // Non-fatal: pages that don't need DB will still render.
-    // Pages that require DB will show an empty state.
-    error_log('[plugininsight] DB connection failed: ' . $e->getMessage());
+/**
+ * Redirects to $url and stops execution.
+ */
+function redirect(string $url): never
+{
+    header('Location: ' . $url);
+    exit;
 }
 
-// ── Route dispatch ────────────────────────────────────────────────────────────
+// ── Helper: require authentication ───────────────────────────────────────────
 
-$pageTitle   = 'WP Plugin Insights';
-$pageMetaDesc = '';
-$pageContent = '';
+/**
+ * Redirects to /login/ if the user is not authenticated.
+ */
+function requireAuth(?Auth $auth): void
+{
+    if ($auth === null || !$auth->isLoggedIn()) {
+        redirect('/login/');
+    }
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────────
 
 ob_start();
 
 switch ($page) {
+    // ── Public: home ─────────────────────────────────────────────────────────
     case 'home':
         $pageTitle    = $i18n->t('home.page_title');
         $pageMetaDesc = $i18n->t('home.meta_desc');
@@ -104,30 +168,24 @@ switch ($page) {
         require __DIR__ . '/templates/home.php';
         break;
 
+    // ── Public: plugin detail ────────────────────────────────────────────────
     case 'plugin':
-        $slug = $params['slug'];
-
-        if ($repo !== null) {
-            $plugin = $repo->findBySlug($slug);
-        } else {
-            $plugin = null;
-        }
+        $slug   = $params['slug'];
+        $plugin = $repo?->findBySlug($slug);
 
         if ($plugin === null) {
             http_response_code(404);
             $pageTitle = $i18n->t('plugin.not_found_title');
-
-            // Inline not-found view (avoids a separate template for a one-liner case)
             echo '<main class="container py-5 text-center" style="max-width:560px">';
-            echo '<h1 class="display-6 fw-bold mb-3">' . $i18n->t('plugin.not_found_heading') . '</h1>';
+            echo '<h1 class="display-6 fw-bold mb-3">'
+                . htmlspecialchars($i18n->t('plugin.not_found_heading'), ENT_QUOTES, 'UTF-8') . '</h1>';
             echo '<p class="text-body-secondary mb-4">'
                 . $i18n->t('plugin.not_found_desc', ['slug' => htmlspecialchars($slug, ENT_QUOTES, 'UTF-8')])
                 . '</p>';
             echo '<a href="/" class="btn btn-primary">'
-                . '<i class="bi bi-house me-1"></i>'
+                . '<i class="bi bi-house me-1" aria-hidden="true"></i>'
                 . htmlspecialchars($i18n->t('plugin.not_found_back'), ENT_QUOTES, 'UTF-8')
-                . '</a>';
-            echo '</main>';
+                . '</a></main>';
             break;
         }
 
@@ -136,12 +194,239 @@ switch ($page) {
         require __DIR__ . '/templates/plugin.php';
         break;
 
+    // ── Public: about ────────────────────────────────────────────────────────
     case 'about':
-        $pageTitle    = $i18n->t('about.page_title');
-        $activePage   = 'about';
+        $pageTitle  = $i18n->t('about.page_title');
+        $activePage = 'about';
         require __DIR__ . '/templates/about.php';
         break;
 
+    // ── Auth: login ──────────────────────────────────────────────────────────
+    case 'login':
+        // Already logged in → home
+        if ($auth !== null && $auth->isLoggedIn()) {
+            redirect('/');
+        }
+
+        $error = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/login/');
+            }
+
+            $email    = trim((string) ($_POST['email']    ?? ''));
+            $password = (string) ($_POST['password'] ?? '');
+            $clientIp = Auth::clientIp();
+
+            if ($auth === null || $userRepo === null) {
+                $error = 'invalid';
+            } elseif (!$auth->login($email, $password, $clientIp)) {
+                $error = $userRepo->countRecentAttemptsByIp($clientIp) >= 5 ? 'locked' : 'invalid';
+            } else {
+                redirect('/');
+            }
+        }
+
+        $pageTitle = $i18n->t('auth.login_title');
+        require __DIR__ . '/templates/login.php';
+        break;
+
+    // ── Auth: logout (POST only) ─────────────────────────────────────────────
+    case 'logout':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('/');
+        }
+
+        if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+            redirect('/');
+        }
+
+        $auth?->logout();
+        redirect('/');
+
+    // ── Auth: forgot password ────────────────────────────────────────────────
+    case 'forgot-password':
+        $sent = false;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/forgot-password/');
+            }
+
+            // Rate-limit by IP (reuse login_attempt window)
+            $clientIp = Auth::clientIp();
+            if ($userRepo !== null && $userRepo->countRecentAttemptsByIp($clientIp) >= 10) {
+                $sent = true; // Show same confirmation; don't reveal rate limit
+            } else {
+                $email = trim((string) ($_POST['email'] ?? ''));
+                // Always show the same confirmation to prevent enumeration
+                $passwordReset?->request($email);
+                $sent = true;
+            }
+        }
+
+        $pageTitle = $i18n->t('auth.forgot_title');
+        require __DIR__ . '/templates/forgot-password.php';
+        break;
+
+    // ── Auth: reset password ─────────────────────────────────────────────────
+    case 'reset-password':
+        $token    = trim((string) ($_GET['token'] ?? ($_POST['token'] ?? '')));
+        $resetRow = $passwordReset?->validate($token);
+        $error    = null;
+        $success  = false;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/reset-password/?token=' . rawurlencode($token));
+            }
+
+            $password = (string) ($_POST['password'] ?? '');
+            $confirm  = (string) ($_POST['confirm']  ?? '');
+
+            if ($resetRow === null) {
+                $error = 'invalid';
+            } elseif (strlen($password) < 12) {
+                $error = 'too_short';
+            } elseif ($password !== $confirm) {
+                $error = 'mismatch';
+            } elseif ($passwordReset !== null) {
+                $passwordReset->complete(
+                    (int) $resetRow['reset_id'],
+                    (int) $resetRow['user_id'],
+                    $password
+                );
+                $success = true;
+            }
+        }
+
+        $pageTitle = $i18n->t('auth.reset_title');
+        require __DIR__ . '/templates/reset-password.php';
+        break;
+
+    // ── Auth: account (requires login) ───────────────────────────────────────
+    case 'account':
+        if ($auth === null || !$auth->isLoggedIn()) {
+            redirect('/login/');
+        }
+
+        $user    = $auth->currentUser() ?? [];
+        $success = null;
+        $error   = null;
+        $section = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/account/');
+            }
+
+            $action  = (string) ($_POST['action'] ?? '');
+            $section = $action;
+
+            if ($action === 'password' && $userRepo !== null) {
+                $currentPw  = (string) ($_POST['current_password']  ?? '');
+                $newPw      = (string) ($_POST['new_password']      ?? '');
+                $confirmPw  = (string) ($_POST['confirm_password']  ?? '');
+
+                if (!password_verify($currentPw, (string) ($user['password_hash'] ?? ''))) {
+                    $error = 'current_pw';
+                } elseif (strlen($newPw) < 12) {
+                    $error = 'too_short';
+                } elseif ($newPw !== $confirmPw) {
+                    $error = 'mismatch';
+                } else {
+                    $userRepo->updatePassword((int) $user['user_id'], password_hash($newPw, PASSWORD_BCRYPT));
+                    redirect('/account/?success=password');
+                }
+            } elseif ($action === 'profile' && $userRepo !== null) {
+                $name = trim((string) ($_POST['display_name'] ?? ''));
+                // Enforce max length and strip control characters server-side
+                $name = substr(preg_replace('/[\x00-\x1F\x7F]/u', '', $name) ?? '', 0, 100);
+                $userRepo->updateName((int) $user['user_id'], $name !== '' ? $name : null);
+                redirect('/account/?success=profile');
+            } elseif ($action === 'lang' && $userRepo !== null) {
+                $lang = trim((string) ($_POST['lang'] ?? ''));
+                $userRepo->updateLang((int) $user['user_id'], $lang !== '' ? $lang : null);
+                // Also update cookie so the UI reflects the change immediately
+                if ($lang !== '' && in_array($lang, I18n::SUPPORTED, true)) {
+                    setcookie('pi_lang', $lang, [
+                        'expires'  => time() + 365 * 24 * 3600,
+                        'path'     => '/',
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    ]);
+                }
+                redirect('/account/?success=lang');
+            }
+
+            // Re-fetch user after any update
+            $user = $auth->currentUser() ?? $user;
+        }
+
+        // Read ?success= from GET after redirect
+        if (isset($_GET['success'])) {
+            $success = match ($_GET['success']) {
+                'password', 'profile', 'lang' => $_GET['success'],
+                default                        => null,
+            };
+        }
+
+        $pageTitle  = $i18n->t('auth.account_title');
+        $activePage = 'account';
+        require __DIR__ . '/templates/account.php';
+        break;
+
+    // ── Search redirect ──────────────────────────────────────────────────────
+    case 'search':
+        $slug = strtolower(trim((string) ($_GET['slug'] ?? '')));
+        $slug = preg_replace('/[^a-z0-9\-]/', '', $slug) ?? '';
+        if ($slug === '') {
+            redirect('/');
+        }
+        redirect('/plugin/' . $slug . '/');
+
+    // ── Auth: register ───────────────────────────────────────────────────────
+    case 'register':
+        // Already logged in → home
+        if ($auth !== null && $auth->isLoggedIn()) {
+            redirect('/');
+        }
+
+        $error = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Csrf::validate((string) ($_POST['_csrf'] ?? ''))) {
+                redirect('/register/');
+            }
+
+            $email    = trim((string) ($_POST['email']    ?? ''));
+            $password = (string) ($_POST['password'] ?? '');
+            $confirm  = (string) ($_POST['confirm']  ?? '');
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = 'invalid_email';
+            } elseif (strlen($password) < 12) {
+                $error = 'too_short';
+            } elseif ($password !== $confirm) {
+                $error = 'mismatch';
+            } elseif ($userRepo !== null) {
+                try {
+                    $userRepo->create($email, password_hash($password, PASSWORD_BCRYPT));
+                    redirect('/login/?registered=1');
+                } catch (\RuntimeException) {
+                    $error = 'email_taken';
+                }
+            } else {
+                $error = 'email_taken';
+            }
+        }
+
+        $pageTitle = $i18n->t('auth.register_title');
+        require __DIR__ . '/templates/register.php';
+        break;
+
+    // ── 404 ──────────────────────────────────────────────────────────────────
     default:
         http_response_code(404);
         $pageTitle = $i18n->t('404.page_title');

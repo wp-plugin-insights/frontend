@@ -29,6 +29,24 @@
                class="nav-link px-2<?= $activePage === 'about' ? ' active" aria-current="page' : '' ?>"
             ><?= htmlspecialchars($i18n->t('nav.about'), ENT_QUOTES, 'UTF-8') ?></a>
 
+            <?php if (!empty($currentUser)) : ?>
+            <a href="/account/"
+               class="nav-link px-2<?= $activePage === 'account' ? ' active" aria-current="page' : '' ?>">
+                <?= htmlspecialchars($i18n->t('nav.account'), ENT_QUOTES, 'UTF-8') ?>
+            </a>
+            <form method="post" action="/logout/" class="d-inline m-0">
+                <?= \PluginInsight\Csrf::field() ?>
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <?= htmlspecialchars($i18n->t('nav.logout'), ENT_QUOTES, 'UTF-8') ?>
+                </button>
+            </form>
+            <?php else : ?>
+            <a href="/login/"
+               class="nav-link px-2<?= $activePage === 'login' ? ' active" aria-current="page' : '' ?>">
+                <?= htmlspecialchars($i18n->t('auth.login_heading'), ENT_QUOTES, 'UTF-8') ?>
+            </a>
+            <?php endif; ?>
+
             <!-- Language switcher -->
             <?php
             $languages = [

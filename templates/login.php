@@ -6,6 +6,9 @@
  * Expected variables:
  *   $i18n    I18n
  *   $error   string|null   — 'invalid' | 'locked' | null
+ *
+ * GET params read directly:
+ *   ?registered=1  — shows account-created confirmation
  */
 
 declare(strict_types=1);
@@ -21,6 +24,12 @@ $errorMsg = match ($error ?? null) {
 
 <main class="container py-5" style="max-width:440px" id="main-content">
     <h1 class="fw-bold mb-4"><?= htmlspecialchars($i18n->t('auth.login_heading'), ENT_QUOTES, 'UTF-8') ?></h1>
+
+    <?php if (isset($_GET['registered'])) : ?>
+    <div class="alert alert-success" role="alert">
+        <?= htmlspecialchars($i18n->t('auth.register_success'), ENT_QUOTES, 'UTF-8') ?>
+    </div>
+    <?php endif; ?>
 
     <?php if ($errorMsg !== null) : ?>
     <div class="alert alert-danger" role="alert">
@@ -67,4 +76,13 @@ $errorMsg = match ($error ?? null) {
             <?= htmlspecialchars($i18n->t('auth.login_forgot'), ENT_QUOTES, 'UTF-8') ?>
         </a>
     </p>
+
+    <hr class="my-4">
+
+    <p class="text-center small text-body-secondary mb-1">
+        <?= htmlspecialchars($i18n->t('auth.login_new_here'), ENT_QUOTES, 'UTF-8') ?>
+    </p>
+    <a href="/register/" class="btn btn-outline-secondary w-100">
+        <?= htmlspecialchars($i18n->t('auth.login_register'), ENT_QUOTES, 'UTF-8') ?>
+    </a>
 </main>
