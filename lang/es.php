@@ -57,7 +57,8 @@ return [
     'plugin.security_title'       => 'Seguridad',
     'plugin.security_pending'     => 'El análisis de seguridad todavía no está disponible para este plugin.',
 
-    // Plugin detail — grade legend
+    // Plugin detail — overall grade + grade legend
+    'plugin.overall_grade'    => 'Nota global',
     'plugin.grade_scale'      => 'Escala de notas',
     'plugin.grade_a'          => 'Excelente',
     'plugin.grade_b'          => 'Bueno',
@@ -111,4 +112,88 @@ return [
     'auth.login_new_here'             => '¿Nuevo aquí?',
     'plugin.author' => 'Autor',
     'plugin.source' => 'Fuente',
+
+    // Plugin detail — Compatibility & Requirements grade notes
+    'plugin.compat_note_no_wp'           => 'No se declara una versión mínima de WordPress',
+    'plugin.compat_note_no_php'          => 'No se declara una versión mínima de PHP',
+    'plugin.compat_note_php_wp_mismatch' => 'El mínimo de PHP declarado es inferior al que requiere la versión de WordPress indicada',
+    'plugin.compat_note_outdated'        => 'El plugin no se ha actualizado en más de un año',
+    'plugin.compat_note_tested_outdated' => 'El plugin no ha sido probado con la versión actual de WordPress',
+
+    // Plugin detail — WP–PHP compatibility row
+    'plugin.wp_php_compat'      => 'Compatibilidad WP–PHP',
+    'plugin.wp_php_compat_info' => 'WP {wp}+ requiere PHP {php}+. Este plugin no declara una versión mínima de PHP.',
+    'plugin.wp_php_compat_warn' => 'WP {wp}+ requiere PHP {php}+, pero este plugin solo declara PHP {declared}+. El mínimo de PHP declarado puede ser demasiado bajo.',
+    'plugin.wp_php_compat_ok'   => 'PHP {declared}+ es compatible con WP {wp}+ (que requiere PHP {php}+).',
+
+    // Runner cards — PHP compatibility block
+    'runner.php_declared'           => 'PHP declarado',
+    'runner.php_detected'           => 'PHP detectado',
+    'runner.php_tested_versions'    => 'Versiones probadas',
+    'runner.php_effective_min'      => 'Mínimo efectivo: PHP {version}+.',
+    'runner.php_grade_note_match'   => 'PHP declarado {declared}+ coincide con el mínimo efectivo ({effective}+)',
+    'runner.php_grade_note_over'    => 'PHP declarado {declared}+ supera el mínimo efectivo ({effective}+) — restricción innecesaria',
+    'runner.php_grade_note_under'   => 'PHP declarado {declared}+ es inferior al mínimo efectivo ({effective}+) — declaración incorrecta',
+
+    // Runner cards — wp-since block
+    'runner.wp_declared_min'        => 'WP mínimo declarado',
+    'runner.wp_suggested_min'       => 'WP mínimo sugerido',
+    'runner.tool_output'            => 'Salida de herramienta',
+
+    // Runner cards — translate block
+    'runner.locales_detected'       => 'Idiomas detectados',
+    'runner.locales_compliant'      => 'Conformes (≥80%)',
+    'runner.untranslated_strings'   => 'Cadenas sin traducir',
+    'runner.text_domain'            => 'Dominio de texto',
+    'runner.load_textdomain'        => 'load_plugin_textdomain',
+    'runner.js_strings_translated'  => 'Cadenas JS traducidas',
+    'runner.supported_locales'      => 'Idiomas admitidos',
+    'runner.no_locale_coverage'     => 'Ningún idioma alcanza el 80% de cobertura.',
+    'runner.coverage_by_locale'     => 'Cobertura por idioma',
+    'runner.locale_col'             => 'Idioma',
+    'runner.language_col'           => 'Nombre',
+    'runner.coverage_col'           => 'Cobertura',
+    'runner.td_declared'            => 'Declarado',
+    'runner.td_expected'            => 'Esperado',
+    'runner.td_usage'               => 'Uso encontrado',
+    'runner.td_valid'               => 'válido',
+    'runner.td_invalid'             => 'inválido',
+    'runner.untranslated_preview'   => 'Cadenas sin traducir (primeras {count})',
+    'runner.str_col'                => 'Cadena',
+    'runner.file_col'               => 'Archivo',
+    'runner.line_col'               => 'Línea',
+    'runner.severity_high'          => 'alto',
+    'runner.severity_medium'        => 'medio',
+    'runner.severity_low'           => 'bajo',
+    'runner.severity_trivial'       => 'trivial',
+
+    // Runner cards — hooks block
+    'runner.hooks_total_used'           => 'Hooks utilizados',
+    'runner.hooks_total_provided'       => 'Hooks proporcionados',
+    'runner.hooks_provides'             => 'Proporciona hooks',
+    'runner.hooks_extensible'           => 'Extensible',
+    'runner.hooks_breakdown'            => 'Desglose de hooks',
+    'runner.hooks_col_unique'           => 'Únicos',
+    'runner.hooks_col_total'            => 'Total',
+    'runner.hooks_actions_used'         => 'Actions utilizadas',
+    'runner.hooks_filters_used'         => 'Filters utilizados',
+    'runner.hooks_actions_provided'     => 'Actions proporcionadas',
+    'runner.hooks_filters_provided'     => 'Filters proporcionados',
+    'runner.hooks_wp_actions_used'      => 'Principales actions de WordPress usadas',
+    'runner.hooks_plugin_actions_used'  => 'Principales actions del plugin usadas',
+    'runner.hooks_wp_filters_used'      => 'Principales filters de WordPress usados',
+    'runner.hooks_plugin_filters_used'  => 'Principales filters del plugin usados',
+    'runner.hooks_col_hook'             => 'Hook',
+    'runner.hooks_col_count'            => 'Usos',
+    'runner.hooks_col_locations'        => 'Ubicaciones',
+    'runner.hooks_provided_title'       => 'Hooks proporcionados',
+    'runner.hooks_show_all'             => 'Ver todos',
+    'runner.hooks_more'                 => 'más',
+
+    // Runner cards — translate grade adjustment notes
+    'runner.tr_note_no_textdomain'      => 'No se declara ningún dominio de texto — nota penalizada −2',
+    'runner.tr_note_invalid_textdomain' => 'El dominio de texto es inválido o no coincide — nota penalizada −1',
+    'runner.tr_note_high'               => '{count} incidencia(s) de gravedad alta — nota penalizada −1',
+    'runner.tr_note_many_high'          => '{count} incidencias de gravedad alta — nota penalizada −2',
+    'runner.tr_note_many_medium'        => '{count} incidencias de gravedad media — nota penalizada −1',
 ];

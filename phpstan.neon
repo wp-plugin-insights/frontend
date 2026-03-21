@@ -8,6 +8,7 @@ parameters:
         - assets/
         - templates/
     bootstrapFiles:
+        - ../dbcon.php
         - ../secrets.php
         - src/I18n.php
         - src/Router.php
@@ -22,3 +23,6 @@ parameters:
         - src/RunnerRepository.php
         - src/RabbitMqInfo.php
         - src/PluginResultRepository.php
+        - src/CronRunRepository.php
+        - src/WpCompatRepository.php
+        - ../crons/src/CronLogger.php

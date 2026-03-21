@@ -79,6 +79,109 @@ $analysedVersions = $analysedVersions ?? [];
 /** @var string $selectedVersion */
 $selectedVersion  = $selectedVersion ?? $version;
 $hasMultipleVersions = count($analysedVersions) > 1;
+
+// ── Compatibility & Requirements grade ───────────────────────────────────────
+// Graded independently of runner results so it can appear in the card header
+// and feed into the overall weighted average.
+//
+// Penalties (cumulative, capped at F):
+//   No WP version declared                        → −1 grade
+//   No PHP version declared                       → −1 grade
+//   Declared PHP below WP-required PHP            → −2 grades
+//   Last update > 1 year ago                      → −1 grade
+//   Tested-up-to is behind current WP branch      → −1 grade
+/** @var string|null $wpMinPhpRequired */
+$wpMinPhpRequired = $wpMinPhpRequired ?? null;
+
+$_compatGl    = ['A', 'B', 'C', 'D', 'F'];
+$_compatPos   = 0;
+$_compatNotes = [];
+
+if ($requires === '') {
+    $_compatPos++;
+    $_compatNotes[] = $i18n->t('plugin.compat_note_no_wp');
+}
+if ($requiresPhp === '') {
+    $_compatPos++;
+    $_compatNotes[] = $i18n->t('plugin.compat_note_no_php');
+}
+if (
+    $requires !== ''
+    && $wpMinPhpRequired !== null
+    && $requiresPhp !== ''
+    && version_compare($requiresPhp, $wpMinPhpRequired, '<')
+) {
+    $_compatPos += 2;
+    $_compatNotes[] = $i18n->t('plugin.compat_note_php_wp_mismatch');
+}
+if ($updatedBadge === $i18n->t('plugin.compat_badge_outdated')) {
+    $_compatPos++;
+    $_compatNotes[] = $i18n->t('plugin.compat_note_outdated');
+}
+if ($testedBadge === $i18n->t('plugin.compat_badge_outdated')) {
+    $_compatPos++;
+    $_compatNotes[] = $i18n->t('plugin.compat_note_tested_outdated');
+}
+
+$_compatPos        = max(0, min(count($_compatGl) - 1, $_compatPos));
+$_compatGrade      = $_compatGl[$_compatPos];
+$_compatGradeClass = [
+    'A' => 'grade-a', 'B' => 'grade-b', 'C' => 'grade-c',
+    'D' => 'grade-d', 'F' => 'grade-f',
+][$_compatGrade];
+$_compatPct        = match ($_compatGrade) {
+    'A' => 95, 'B' => 80, 'C' => 65, 'D' => 50, default => 20,
+};
+
+// ── Overall grade (weighted) ─────────────────────────────────────────────────
+// Compute a weighted average across all runners that returned a result.
+// Compatibility and security runners carry more weight than style/i18n runners
+// so that a low translation score alone cannot pull the grade to F.
+//
+// Runners absent from the result set are excluded entirely (do not contribute 0).
+$_gradeWeights = [
+    'security'          => 3.0,
+    'php-compatibility' => 2.5,
+    'wp-since'          => 2.0,
+    'code-quality'      => 1.5,
+    'performance'       => 1.5,
+    'maintenance'       => 1.0,
+    'license'           => 0.8,
+    'translate'         => 0.5,
+    'translations'      => 0.5,
+];
+$_defaultWeight = 1.0;
+
+// Compat card always contributes to the overall grade (weight 2.0).
+$_weightedSum   = (float) $_compatPct * 2.0;
+$_weightTotal   = 2.0;
+foreach ($analysisResults as $_rSlug => $_runnerResult) {
+    $_pct = $_runnerResult['score']['percentage'] ?? null;
+    if (!is_int($_pct) && !is_float($_pct)) {
+        continue;
+    }
+    $_w            = (float) ($_gradeWeights[$_rSlug] ?? $_defaultWeight);
+    $_weightedSum += (float) $_pct * $_w;
+    $_weightTotal += $_w;
+}
+
+$_overallGrade      = '';
+$_overallPct        = null;
+$_overallGradeClass = '';
+if ($_weightTotal > 0.0) {
+    $_overallPct = (int) round($_weightedSum / $_weightTotal);
+    $_overallGrade = match (true) {
+        $_overallPct >= 90 => 'A',
+        $_overallPct >= 75 => 'B',
+        $_overallPct >= 60 => 'C',
+        $_overallPct >= 45 => 'D',
+        default            => 'F',
+    };
+    $_overallGradeClass = [
+        'A' => 'grade-a', 'B' => 'grade-b', 'C' => 'grade-c',
+        'D' => 'grade-d', 'F' => 'grade-f',
+    ][$_overallGrade] ?? 'grade-f';
+}
 ?>
 
 <!-- ── Breadcrumb ────────────────────────────────────────── -->
@@ -110,6 +213,19 @@ $hasMultipleVersions = count($analysedVersions) > 1;
                      aria-hidden="true">
                 <?php endif; ?>
                 <div class="flex-grow-1">
+                <?php if ($_overallGrade !== '') : ?>
+                <div class="float-end ms-3 text-center flex-shrink-0">
+                    <div class="grade <?php echo htmlspecialchars($_overallGradeClass, ENT_QUOTES, 'UTF-8') ?>"
+                         style="width:3.5rem;height:3.5rem;font-size:1.6rem;line-height:3.5rem"
+                         aria-label="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ' ' . $_overallGrade, ENT_QUOTES, 'UTF-8') ?>"
+                         title="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ': ' . $_overallGrade . ' (' . $_overallPct . '%)', ENT_QUOTES, 'UTF-8') ?>">
+                        <?php echo htmlspecialchars($_overallGrade, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="text-body-secondary small mt-1">
+                        <?php echo htmlspecialchars($_overallPct . '%', ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                </div>
+                <?php endif; ?>
                     <h1 class="h3 fw-bold mb-1">
                         <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>
                     </h1>
@@ -225,11 +341,22 @@ $hasMultipleVersions = count($analysedVersions) > 1;
                         <i class="bi bi-check2-circle fs-5 text-success" aria-hidden="true"></i>
                         <span class="fw-semibold"><?php echo htmlspecialchars($i18n->t('plugin.compat_title'), ENT_QUOTES, 'UTF-8') ?></span>
                     </div>
-                    <i class="bi bi-chevron-down toggle-icon text-body-secondary" aria-hidden="true"></i>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="grade <?php echo htmlspecialchars($_compatGradeClass, ENT_QUOTES, 'UTF-8') ?>"
+                              aria-label="<?php echo htmlspecialchars($i18n->t('plugin.grade_label', ['grade' => $_compatGrade]), ENT_QUOTES, 'UTF-8') ?>">
+                            <?php echo htmlspecialchars($_compatGrade, ENT_QUOTES, 'UTF-8') ?>
+                        </span>
+                        <i class="bi bi-chevron-down toggle-icon text-body-secondary" aria-hidden="true"></i>
+                    </div>
                 </button>
             </div>
             <div class="collapse show" id="card-compat">
                 <div class="card-body border-top">
+                    <?php if (!empty($_compatNotes)) : ?>
+                    <p class="small text-body-secondary mb-2">
+                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i><?php echo htmlspecialchars(implode('; ', $_compatNotes), ENT_QUOTES, 'UTF-8') ?>.
+                    </p>
+                    <?php endif; ?>
                     <table class="table table-sm table-borderless mb-0"
                            aria-label="<?php echo htmlspecialchars($i18n->t('plugin.compat_title'), ENT_QUOTES, 'UTF-8') ?>">
                         <tbody>
@@ -301,6 +428,58 @@ $hasMultipleVersions = count($analysedVersions) > 1;
                                     <?php endif; ?>
                                 </td>
                             </tr>
+                            <?php
+                            // ── WordPress–PHP compatibility check ──────────────────────────
+                            // $wpMinPhpRequired: minimum PHP needed to run $requires WP (from wp_php_compat table).
+                            // Only shown when we have both a WP requirement and a table entry.
+                            /** @var string|null $wpMinPhpRequired */
+                            $wpMinPhpRequired = $wpMinPhpRequired ?? null;
+
+                            if ($requires !== '' && $wpMinPhpRequired !== null) :
+                                // Determine compatibility status
+                                if ($requiresPhp === '') {
+                                    // Plugin doesn't declare PHP at all — just inform
+                                    $wpCompatStatus  = 'info';
+                                    $wpCompatBadge   = 'text-bg-info';
+                                    $wpCompatIcon    = 'bi-info-circle';
+                                    $wpCompatMessage = $i18n->t('plugin.wp_php_compat_info', [
+                                        'wp'  => $requires,
+                                        'php' => $wpMinPhpRequired,
+                                    ]);
+                                } elseif (version_compare($requiresPhp, $wpMinPhpRequired, '<')) {
+                                    // Plugin PHP requirement is lower than what its WP version needs — mismatch
+                                    $wpCompatStatus  = 'warning';
+                                    $wpCompatBadge   = 'text-bg-danger';
+                                    $wpCompatIcon    = 'bi-exclamation-triangle-fill';
+                                    $wpCompatMessage = $i18n->t('plugin.wp_php_compat_warn', [
+                                        'wp'       => $requires,
+                                        'php'      => $wpMinPhpRequired,
+                                        'declared' => $requiresPhp,
+                                    ]);
+                                } else {
+                                    // Plugin PHP requirement is at or above what its WP version needs — OK
+                                    $wpCompatStatus  = 'ok';
+                                    $wpCompatBadge   = 'text-bg-success';
+                                    $wpCompatIcon    = 'bi-check-circle-fill';
+                                    $wpCompatMessage = $i18n->t('plugin.wp_php_compat_ok', [
+                                        'declared' => $requiresPhp,
+                                        'wp'       => $requires,
+                                        'php'      => $wpMinPhpRequired,
+                                    ]);
+                                }
+                                ?>
+                            <tr>
+                                <td class="text-body-secondary"><?php echo htmlspecialchars($i18n->t('plugin.wp_php_compat'), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td>
+                                    <span class="badge <?php echo htmlspecialchars($wpCompatBadge, ENT_QUOTES, 'UTF-8') ?> me-1">
+                                        <i class="bi <?php echo htmlspecialchars($wpCompatIcon, ENT_QUOTES, 'UTF-8') ?> me-1" aria-hidden="true"></i><?php echo htmlspecialchars($wpCompatStatus, ENT_QUOTES, 'UTF-8') ?>
+                                    </span>
+                                    <span class="small text-body-secondary">
+                                        <?php echo htmlspecialchars($wpCompatMessage, ENT_QUOTES, 'UTF-8') ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

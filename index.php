@@ -24,6 +24,8 @@ require_once __DIR__ . '/src/SiteSettingRepository.php';
 require_once __DIR__ . '/src/RunnerRepository.php';
 require_once __DIR__ . '/src/RabbitMqInfo.php';
 require_once __DIR__ . '/src/PluginResultRepository.php';
+require_once __DIR__ . '/src/CronRunRepository.php';
+require_once __DIR__ . '/src/WpCompatRepository.php';
 
 use PluginInsight\Auth;
 use PluginInsight\Csrf;
@@ -35,7 +37,10 @@ use PluginInsight\RabbitMqInfo;
 use PluginInsight\Router;
 use PluginInsight\RunnerRepository;
 use PluginInsight\SiteSettingRepository;
+use PluginInsight\CronRunRepository;
+use PluginInsight\UploadRepository;
 use PluginInsight\UserRepository;
+use PluginInsight\WpCompatRepository;
 
 Auth::startSession();
 
@@ -57,6 +62,10 @@ $settingRepo = null;
 $runnerRepo = null;
 /** @var PluginResultRepository|null $resultRepo */
 $resultRepo = null;
+/** @var CronRunRepository|null $cronRunRepo */
+$cronRunRepo = null;
+/** @var WpCompatRepository|null $wpCompatRepo */
+$wpCompatRepo = null;
 
 try {
     require_once __DIR__ . '/../dbcon.php';
@@ -69,6 +78,8 @@ try {
     $settingRepo   = new SiteSettingRepository($db);
     $runnerRepo    = new RunnerRepository($db);
     $resultRepo    = new PluginResultRepository($db);
+    $cronRunRepo   = new CronRunRepository($db);
+    $wpCompatRepo  = new WpCompatRepository($db);
 } catch (\RuntimeException $e) {
     error_log('[plugininsight] DB connection failed: ' . $e->getMessage());
 }
@@ -256,6 +267,16 @@ switch ($page) {
         $analysisResults = [];
         if ($resultRepo !== null && $pluginId > 0 && $selectedVersion !== '') {
             $analysisResults = $resultRepo->getByPluginVersion($pluginId, $selectedVersion);
+        }
+
+        // WordPress–PHP compatibility check for the Compatibility & Requirements card.
+        // $pluginRequiresWp and $pluginRequiresPhp mirror the plugin table fields so the
+        // template can compute the check without re-reading the repo.
+        $pluginRequiresWp  = (string) ($plugin['plugin_requires']     ?? '');
+        $pluginRequiresPhp = (string) ($plugin['plugin_requires_php'] ?? '');
+        $wpMinPhpRequired  = null;
+        if ($wpCompatRepo !== null && $pluginRequiresWp !== '') {
+            $wpMinPhpRequired = $wpCompatRepo->getPhpRequirementForWp($pluginRequiresWp);
         }
 
         require __DIR__ . '/templates/plugin.php';
@@ -563,6 +584,24 @@ switch ($page) {
                 redirect('/admin/?success=runner_delete&tab=pipeline');
             }
 
+            // ── WP–PHP compat: upsert ───────────────────────────────────
+            if ($action === 'wp_compat_upsert' && $wpCompatRepo !== null) {
+                $wcWp  = trim((string) ($_POST['wp_version']      ?? ''));
+                $wcPhp = trim((string) ($_POST['php_min_version'] ?? ''));
+                if (!$wpCompatRepo->upsert($wcWp, $wcPhp)) {
+                    $adminError = 'Invalid version format. Use digits and dots only (e.g. "6.6", "7.2.24").';
+                } else {
+                    redirect('/admin/?success=wp_compat_upsert&tab=settings');
+                }
+            }
+
+            // ── WP–PHP compat: delete ────────────────────────────────────
+            if ($action === 'wp_compat_delete' && $wpCompatRepo !== null) {
+                $wcWp = trim((string) ($_POST['wp_version'] ?? ''));
+                $wpCompatRepo->delete($wcWp);
+                redirect('/admin/?success=wp_compat_delete&tab=settings');
+            }
+
             // ── User admin: toggle ───────────────────────────────────────
             if ($action === 'user_admin' && $userRepo !== null) {
                 $targetId    = (int) ($_POST['user_id']           ?? 0);
@@ -640,6 +679,20 @@ switch ($page) {
         if ($userSearchTerm !== '' && $userRepo !== null) {
             $userSearchResults = $userRepo->searchByEmail($userSearchTerm);
         }
+
+        // Cron run history (crons tab)
+        $cronRuns = $cronRunRepo?->getRecentByName(10) ?? [];
+
+        // Paginated user list (settings tab)
+        $userListPerPage = 25;
+        $userListPage    = max(1, (int) ($_GET['user_page'] ?? 1));
+        $userListTotal   = $userRepo?->getTotalCount() ?? 0;
+        $userListPages   = $userListTotal > 0 ? (int) ceil($userListTotal / $userListPerPage) : 1;
+        $userListPage    = min($userListPage, $userListPages);
+        $userList        = $userRepo?->getPaginated($userListPage, $userListPerPage) ?? [];
+
+        // WP–PHP compatibility table (settings tab)
+        $wpCompatEntries = $wpCompatRepo?->getAll() ?? [];
 
         $pageTitle  = 'Admin — WP Plugin Insights';
         $activePage = 'admin';

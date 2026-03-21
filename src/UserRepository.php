@@ -177,6 +177,45 @@ class UserRepository
     }
 
     /**
+     * Returns the total number of registered users.
+     */
+    public function getTotalCount(): int
+    {
+        $result = $this->db->query('SELECT COUNT(*) FROM `user`');
+        return (int) (($result !== false ? $result->fetch_row() : null)[0] ?? 0);
+    }
+
+    /**
+     * Returns one page of users ordered by registration date (newest first).
+     *
+     * @param  int $page    1-based page number.
+     * @param  int $perPage Number of rows per page.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getPaginated(int $page, int $perPage): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $stmt   = $this->db->prepare(
+            'SELECT user_id, email, user_is_admin, created_at
+             FROM `user`
+             ORDER BY created_at DESC
+             LIMIT ? OFFSET ?'
+        );
+        $stmt->bind_param('ii', $perPage, $offset);
+        $stmt->execute();
+
+        $result = $stmt->get_result();
+        $rows   = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+        $stmt->close();
+
+        return $rows;
+    }
+
+    /**
      * Grants or revokes the admin flag for a user.
      */
     public function setAdmin(int $userId, bool $isAdmin): void

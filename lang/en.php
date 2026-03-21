@@ -65,7 +65,8 @@ return [
     'plugin.issues_title'     => 'Issues',
     'plugin.analysed_on'      => 'Analysed on',
 
-    // Plugin detail — grade legend
+    // Plugin detail — overall grade + grade legend
+    'plugin.overall_grade'    => 'Overall grade',
     'plugin.grade_scale'      => 'Grade scale',
     'plugin.grade_a'          => 'Excellent',
     'plugin.grade_b'          => 'Good',
@@ -180,4 +181,88 @@ return [
     'auth.register_success'           => 'Account created. You can now log in.',
     'auth.login_register'             => 'Create account',
     'auth.login_new_here'             => 'New here?',
+
+    // Plugin detail — Compatibility & Requirements grade notes
+    'plugin.compat_note_no_wp'           => 'No minimum WordPress version is declared',
+    'plugin.compat_note_no_php'          => 'No minimum PHP version is declared',
+    'plugin.compat_note_php_wp_mismatch' => 'Declared PHP minimum is below what the target WordPress version requires',
+    'plugin.compat_note_outdated'        => 'Plugin has not been updated in over a year',
+    'plugin.compat_note_tested_outdated' => 'Plugin has not been tested with the current WordPress version',
+
+    // Plugin detail — WP–PHP compatibility row
+    'plugin.wp_php_compat'      => 'WP–PHP compatibility',
+    'plugin.wp_php_compat_info' => 'WP {wp}+ requires PHP {php}+. This plugin does not declare a minimum PHP version.',
+    'plugin.wp_php_compat_warn' => 'WP {wp}+ requires PHP {php}+, but this plugin only declares PHP {declared}+. The declared PHP minimum may be too low.',
+    'plugin.wp_php_compat_ok'   => 'PHP {declared}+ is compatible with WP {wp}+ (which requires PHP {php}+).',
+
+    // Runner cards — PHP compatibility block
+    'runner.php_declared'           => 'Declared PHP',
+    'runner.php_detected'           => 'Detected PHP',
+    'runner.php_tested_versions'    => 'Tested versions',
+    'runner.php_effective_min'      => 'Effective minimum: PHP {version}+.',
+    'runner.php_grade_note_match'   => 'Declared PHP {declared}+ matches the effective minimum ({effective}+)',
+    'runner.php_grade_note_over'    => 'Declared PHP {declared}+ is above the effective minimum ({effective}+) — unnecessarily strict',
+    'runner.php_grade_note_under'   => 'Declared PHP {declared}+ is below the effective minimum ({effective}+) — incorrect declaration',
+
+    // Runner cards — wp-since block
+    'runner.wp_declared_min'        => 'Declared min WP',
+    'runner.wp_suggested_min'       => 'Suggested min WP',
+    'runner.tool_output'            => 'Tool output',
+
+    // Runner cards — translate block
+    'runner.locales_detected'       => 'Locales detected',
+    'runner.locales_compliant'      => 'Compliant (≥80%)',
+    'runner.untranslated_strings'   => 'Untranslated strings',
+    'runner.text_domain'            => 'Text domain',
+    'runner.load_textdomain'        => 'load_plugin_textdomain',
+    'runner.js_strings_translated'  => 'JS strings translated',
+    'runner.supported_locales'      => 'Supported locales',
+    'runner.no_locale_coverage'     => 'No locale reaches 80% coverage.',
+    'runner.coverage_by_locale'     => 'Coverage by locale',
+    'runner.locale_col'             => 'Locale',
+    'runner.language_col'           => 'Language',
+    'runner.coverage_col'           => 'Coverage',
+    'runner.td_declared'            => 'Declared',
+    'runner.td_expected'            => 'Expected',
+    'runner.td_usage'               => 'Usage found',
+    'runner.td_valid'               => 'valid',
+    'runner.td_invalid'             => 'invalid',
+    'runner.untranslated_preview'   => 'Untranslated strings (first {count})',
+    'runner.str_col'                => 'String',
+    'runner.file_col'               => 'File',
+    'runner.line_col'               => 'Line',
+    'runner.severity_high'          => 'high',
+    'runner.severity_medium'        => 'medium',
+    'runner.severity_low'           => 'low',
+    'runner.severity_trivial'       => 'trivial',
+
+    // Runner cards — hooks block
+    'runner.hooks_total_used'           => 'Hooks used',
+    'runner.hooks_total_provided'       => 'Hooks provided',
+    'runner.hooks_provides'             => 'Provides hooks',
+    'runner.hooks_extensible'           => 'Extensible',
+    'runner.hooks_breakdown'            => 'Hook breakdown',
+    'runner.hooks_col_unique'           => 'Unique',
+    'runner.hooks_col_total'            => 'Total',
+    'runner.hooks_actions_used'         => 'Actions used',
+    'runner.hooks_filters_used'         => 'Filters used',
+    'runner.hooks_actions_provided'     => 'Actions provided',
+    'runner.hooks_filters_provided'     => 'Filters provided',
+    'runner.hooks_wp_actions_used'      => 'Top WordPress actions used',
+    'runner.hooks_plugin_actions_used'  => 'Top plugin actions used',
+    'runner.hooks_wp_filters_used'      => 'Top WordPress filters used',
+    'runner.hooks_plugin_filters_used'  => 'Top plugin filters used',
+    'runner.hooks_col_hook'             => 'Hook',
+    'runner.hooks_col_count'            => 'Count',
+    'runner.hooks_col_locations'        => 'Locations',
+    'runner.hooks_provided_title'       => 'Hooks provided',
+    'runner.hooks_show_all'             => 'Show all',
+    'runner.hooks_more'                 => 'more',
+
+    // Runner cards — translate grade adjustment notes
+    'runner.tr_note_no_textdomain'     => 'No text domain is declared — grade penalised −2',
+    'runner.tr_note_invalid_textdomain' => 'Text domain is invalid or mismatched — grade penalised −1',
+    'runner.tr_note_high'              => '{count} high-severity issue(s) — grade penalised −1',
+    'runner.tr_note_many_high'         => '{count} high-severity issues — grade penalised −2',
+    'runner.tr_note_many_medium'       => '{count} medium-severity issues — grade penalised −1',
 ];

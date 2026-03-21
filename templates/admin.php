@@ -19,6 +19,7 @@
  *   $pluginSearchResults list<array<string, mixed>>
  *   $userSearchTerm      string
  *   $userSearchResults   list<array<string, mixed>>
+ *   $cronRuns            array<string, list<array<string, mixed>>>  — cron_name → last N runs
  *   $adminSuccess        string|null
  *   $adminError          string|null
  *
@@ -31,11 +32,13 @@ $apiActive   = ($settings['api_active']   ?? '1') === '1';
 $apiHostname = $settings['api_hostname']  ?? 'api.plugininsight.com';
 
 $successMessages = [
-    'api_settings'  => 'API settings saved.',
-    'runner_toggle' => 'Runner status updated.',
-    'runner_add'    => 'Runner created.',
-    'runner_delete' => 'Runner deleted.',
-    'user_admin'    => 'User admin status updated.',
+    'api_settings'      => 'API settings saved.',
+    'runner_toggle'     => 'Runner status updated.',
+    'runner_add'        => 'Runner created.',
+    'runner_delete'     => 'Runner deleted.',
+    'user_admin'        => 'User admin status updated.',
+    'wp_compat_upsert'  => 'WP–PHP compatibility entry saved.',
+    'wp_compat_delete'  => 'WP–PHP compatibility entry deleted.',
 ];
 $successMsg = isset($adminSuccess, $successMessages[$adminSuccess])
     ? $successMessages[$adminSuccess]
@@ -43,7 +46,7 @@ $successMsg = isset($adminSuccess, $successMessages[$adminSuccess])
 
 // Determine which tab to show on load
 $activeTab = 'overview';
-if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugins','settings'], true)) {
+if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugins','crons','settings'], true)) {
     $activeTab = (string) $_GET['tab'];
 } elseif ($adminError !== null) {
     $activeTab = 'pipeline';
@@ -110,6 +113,18 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                     aria-controls="tab-plugins"
                     aria-selected="<?= $activeTab === 'plugins'   ? 'true' : 'false' ?>">
                 <i class="bi bi-puzzle me-1" aria-hidden="true"></i>Plugins
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?= $activeTab === 'crons'     ? 'active' : '' ?>"
+                    id="tab-crons-btn"
+                    data-bs-toggle="tab"
+                    data-bs-target="#tab-crons"
+                    type="button"
+                    role="tab"
+                    aria-controls="tab-crons"
+                    aria-selected="<?= $activeTab === 'crons'     ? 'true' : 'false' ?>">
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Crons
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -200,17 +215,17 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($runners as $runner) : ?>
-                            <?php
-                            $rSlug      = (string) $runner['runner_slug'];
-                            $rQueue     = (string) $runner['runner_queue'];
-                            $rActive    = (int) $runner['runner_is_active'] === 1;
-                            $rStats     = $runnerStatsBySlug[$rSlug] ?? null;
-                            $rQueueData = $queueByName[$rQueue]      ?? null;
-                            $rCount     = $rStats     !== null ? (int) $rStats['result_count']           : 0;
-                            $rLatest    = $rStats     !== null ? substr((string) $rStats['latest_date'], 0, 16) : '—';
-                            $rReady     = $rQueueData !== null ? (int) $rQueueData['messages_ready']     : null;
-                            $rConsumers = $rQueueData !== null ? (int) $rQueueData['consumers']          : null;
-                            ?>
+                                <?php
+                                $rSlug      = (string) $runner['runner_slug'];
+                                $rQueue     = (string) $runner['runner_queue'];
+                                $rActive    = (int) $runner['runner_is_active'] === 1;
+                                $rStats     = $runnerStatsBySlug[$rSlug] ?? null;
+                                $rQueueData = $queueByName[$rQueue]      ?? null;
+                                $rCount     = $rStats     !== null ? (int) $rStats['result_count']           : 0;
+                                $rLatest    = $rStats     !== null ? substr((string) $rStats['latest_date'], 0, 16) : '—';
+                                $rReady     = $rQueueData !== null ? (int) $rQueueData['messages_ready']     : null;
+                                $rConsumers = $rQueueData !== null ? (int) $rQueueData['consumers']          : null;
+                                ?>
                             <tr>
                                 <td>
                                     <span class="fw-semibold"><?= esc((string) $runner['runner_name']) ?></span>
@@ -274,14 +289,15 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($recentResults as $res) : ?>
-                            <?php
-                            $resGrade = strtolower((string) ($res['grade']       ?? ''));
-                            $resSlug  = (string) ($res['plugin_slug']  ?? '');
-                            ?>
+                                <?php
+                                $resGrade = strtolower((string) ($res['grade']       ?? ''));
+                                $resSlug  = (string) ($res['plugin_slug']  ?? '');
+                                ?>
                             <tr>
                                 <td>
                                     <?php if ($resSlug !== '') : ?>
-                                    <a href="/plugin/<?= esc($resSlug) ?>/"
+                                        <?php $resVersion = (string) ($res['plugin_version'] ?? ''); ?>
+                                    <a href="/plugin/<?= esc($resSlug) ?>/<?= $resVersion !== '' ? '?version=' . esc($resVersion) : '' ?>"
                                        class="text-decoration-none plugin-slug">
                                         <?= esc($resSlug) ?>
                                     </a>
@@ -351,10 +367,10 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($runners as $runner) : ?>
-                            <?php
-                            $rId     = (int) $runner['runner_id'];
-                            $rActive = (int) $runner['runner_is_active'] === 1;
-                            ?>
+                                <?php
+                                $rId     = (int) $runner['runner_id'];
+                                $rActive = (int) $runner['runner_is_active'] === 1;
+                                ?>
                             <tr>
                                 <td><?= esc((string) $runner['runner_name']) ?></td>
                                 <td><code><?= esc((string) $runner['runner_slug']) ?></code></td>
@@ -374,13 +390,6 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                                 class="btn btn-sm <?= $rActive ? 'btn-outline-warning' : 'btn-outline-success' ?>">
                                             <?= $rActive ? 'Deactivate' : 'Activate' ?>
                                         </button>
-                                    </form>
-                                    <form method="post" action="/admin/" class="d-inline ms-1"
-                                          onsubmit="return confirm('Delete runner <?= esc((string) $runner['runner_name']) ?>?')">
-                                        <?= \PluginInsight\Csrf::field() ?>
-                                        <input type="hidden" name="action" value="runner_delete">
-                                        <input type="hidden" name="runner_id" value="<?= $rId ?>">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
@@ -449,12 +458,12 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($queues as $q) : ?>
-                            <?php
-                            $qMsgs      = (int) ($q['messages']                ?? 0);
-                            $qReady     = (int) ($q['messages_ready']          ?? 0);
-                            $qUnacked   = (int) ($q['messages_unacknowledged'] ?? 0);
-                            $qConsumers = (int) ($q['consumers']               ?? 0);
-                            ?>
+                                <?php
+                                $qMsgs      = (int) ($q['messages']                ?? 0);
+                                $qReady     = (int) ($q['messages_ready']          ?? 0);
+                                $qUnacked   = (int) ($q['messages_unacknowledged'] ?? 0);
+                                $qConsumers = (int) ($q['consumers']               ?? 0);
+                                ?>
                             <tr>
                                 <td><code><?= esc((string) ($q['name'] ?? '')) ?></code></td>
                                 <td class="text-end">
@@ -572,20 +581,20 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($recentUploads as $up) : ?>
-                            <?php
-                            $upStatus  = (string) ($up['upload_status'] ?? 'pending');
-                            $upBadge   = match ($upStatus) {
-                                'queued' => 'text-bg-primary',
-                                'done'   => 'text-bg-success',
-                                'error'  => 'text-bg-danger',
-                                default  => 'text-bg-secondary',
-                            };
+                                <?php
+                                $upStatus  = (string) ($up['upload_status'] ?? 'pending');
+                                $upBadge   = match ($upStatus) {
+                                    'queued' => 'text-bg-primary',
+                                    'done'   => 'text-bg-success',
+                                    'error'  => 'text-bg-danger',
+                                    default  => 'text-bg-secondary',
+                                };
                             $upName    = (string) ($up['plugin_name']    ?? $up['plugin_slug'] ?? '—');
                             $upUuid    = (string) ($up['upload_uuid']    ?? '');
                             $upSlug    = (string) ($up['plugin_slug']    ?? '');
                             $upVersion = (string) ($up['plugin_version'] ?? '');
                             $upGrade   = strtolower($uploadGrades[$upSlug . ':' . $upVersion] ?? '');
-                            ?>
+    ?>
                             <tr>
                                 <td>
                                     <?= esc($upName) ?>
@@ -669,13 +678,13 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($pluginSearchResults as $ps) : ?>
-                            <?php
-                            $psSlug    = (string) ($ps['plugin_slug']         ?? '');
-                            $psName    = (string) ($ps['plugin_name']         ?? '');
-                            $psVersion = (string) ($ps['plugin_version']      ?? '—');
-                            $psUpdated = substr((string) ($ps['plugin_last_updated'] ?? ''), 0, 10);
-                            $psCount   = (int) ($ps['result_count'] ?? 0);
-                            ?>
+                                <?php
+                                $psSlug    = (string) ($ps['plugin_slug']         ?? '');
+                                $psName    = (string) ($ps['plugin_name']         ?? '');
+                                $psVersion = (string) ($ps['plugin_version']      ?? '—');
+                                $psUpdated = substr((string) ($ps['plugin_last_updated'] ?? ''), 0, 10);
+                                $psCount   = (int) ($ps['result_count'] ?? 0);
+                                ?>
                             <tr>
                                 <td><code class="plugin-slug"><?= esc($psSlug) ?></code></td>
                                 <td class="text-body-secondary small"><?= esc($psName !== '' ? $psName : '—') ?></td>
@@ -706,6 +715,155 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
 
     </div><!-- /tab-plugins -->
 
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         TAB: Crons
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade <?= $activeTab === 'crons' ? 'show active' : '' ?>"
+         id="tab-crons"
+         role="tabpanel"
+         aria-labelledby="tab-crons-btn">
+
+        <?php
+        /**
+         * Known cron jobs with their expected schedule and reasonable maximum
+         * wall-clock duration in milliseconds. Runs that exceed the max are
+         * flagged with a warning colour in the duration column.
+         *
+         * @var array<string, array{schedule: string, max_ms: int}>
+         */
+        $cronMeta = [
+            'fetch-new-plugins' => ['schedule' => 'Every 5 min',      'max_ms' => 120_000],
+            'fetch-all-plugins' => ['schedule' => 'Daily 02:00 UTC',  'max_ms' => 1_200_000],
+            'validate-plugins'  => ['schedule' => 'Every 1 min',      'max_ms' => 50_000],
+            'cleanup-plugins'   => ['schedule' => 'Every 1 hr',       'max_ms' => 120_000],
+            'fetch-wp-versions' => ['schedule' => 'Every 1 hr',       'max_ms' => 30_000],
+            'fetch-wp-locales'  => ['schedule' => 'Weekly',           'max_ms' => 30_000],
+        ];
+
+        /**
+         * Formats a duration in milliseconds into a human-readable string.
+         *
+         * @param int|null $ms Duration in milliseconds, or null if not yet finished.
+         *
+         * @return string Human-readable duration, e.g. "1m 4s", "320ms", or "—".
+         */
+        $fmtDuration = static function (?int $ms): string {
+            if ($ms === null) {
+                return '—';
+            }
+            if ($ms < 1_000) {
+                return $ms . 'ms';
+            }
+            $s = (int) round($ms / 1_000);
+            if ($s < 60) {
+                return $s . 's';
+            }
+            return (int) ($s / 60) . 'm ' . ($s % 60) . 's';
+        };
+
+        // Merge known crons with any extra names found in the DB (future-proof).
+        $allCronNames = array_unique(array_merge(
+            array_keys($cronMeta),
+            array_keys($cronRuns)
+        ));
+        ?>
+
+        <?php foreach ($allCronNames as $cronName) :
+            $runs     = $cronRuns[$cronName] ?? [];
+            $meta     = $cronMeta[$cronName] ?? ['schedule' => '—', 'max_ms' => PHP_INT_MAX];
+            $lastRun  = $runs[0] ?? null;
+            $lastStat = $lastRun !== null ? (string) ($lastRun['status'] ?? '') : '';
+
+            // Overall health indicator for the card header
+            $healthIcon = match ($lastStat) {
+                'ok'      => '<i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>',
+                'error'   => '<i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>',
+                'running' => '<i class="bi bi-arrow-repeat text-warning" aria-hidden="true"></i>',
+                default   => '<i class="bi bi-dash-circle text-secondary" aria-hidden="true"></i>',
+            };
+    ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 py-2">
+                <div class="d-flex align-items-center gap-2">
+                    <?= $healthIcon ?>
+                    <span class="fw-semibold font-monospace small"><?= esc($cronName) ?></span>
+                    <span class="badge text-bg-light border text-body-secondary">
+                        <?= esc($meta['schedule']) ?>
+                    </span>
+                </div>
+                <?php if ($lastRun !== null) : ?>
+                <span class="text-body-secondary small">
+                    Last run: <?= esc(substr((string) ($lastRun['started_at'] ?? ''), 0, 16)) ?>
+                </span>
+                <?php endif; ?>
+            </div>
+
+            <?php if (empty($runs)) : ?>
+            <div class="card-body py-2">
+                <p class="text-body-secondary small mb-0">No runs recorded yet.</p>
+            </div>
+            <?php else : ?>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th class="text-end">Items</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($runs as $run) :
+                            $runStatus  = (string) ($run['status'] ?? '');
+                            $runDurMs   = isset($run['duration_ms']) ? (int) $run['duration_ms'] : null;
+                            $runItems   = (int) ($run['items_processed'] ?? 0);
+                            $runErr     = (string) ($run['error_message'] ?? '');
+                            $runStarted = substr((string) ($run['started_at'] ?? ''), 0, 16);
+                            $durSlow    = $runDurMs !== null && $runDurMs > $meta['max_ms'];
+
+                            $statusBadge = match ($runStatus) {
+                                'ok'      => 'text-bg-success',
+                                'error'   => 'text-bg-danger',
+                                'running' => 'text-bg-warning',
+                                default   => 'text-bg-secondary',
+                            };
+    ?>
+                        <tr>
+                            <td class="text-body-secondary font-monospace"><?= esc($runStarted) ?></td>
+                            <td class="<?= $durSlow ? 'text-warning-emphasis fw-semibold' : 'text-body-secondary' ?>">
+                                <?= esc($fmtDuration($runDurMs)) ?>
+                                <?php if ($durSlow) : ?>
+                                <i class="bi bi-exclamation-triangle-fill ms-1"
+                                   title="Exceeded expected max duration"
+                                   aria-hidden="true"></i>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="badge <?= htmlspecialchars($statusBadge, ENT_QUOTES, 'UTF-8') ?>">
+                                    <?= esc($runStatus) ?>
+                                </span>
+                            </td>
+                            <td class="text-end text-body-secondary"><?= $runItems > 0 ? $runItems : '—' ?></td>
+                            <td class="text-danger small">
+                                <?php if ($runErr !== '') : ?>
+                                <span title="<?= esc($runErr) ?>">
+                                    <?= esc(mb_strimwidth($runErr, 0, 80, '…')) ?>
+                                </span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+
+    </div><!-- /tab-crons -->
 
     <!-- ══════════════════════════════════════════════════════════════════════
          TAB: Settings
@@ -770,6 +928,8 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                 <i class="bi bi-people me-1" aria-hidden="true"></i>User Management
             </div>
             <div class="card-body">
+
+                <!-- Search -->
                 <form method="get" action="/admin/" class="d-flex gap-2 mb-3">
                     <input type="hidden" name="tab" value="settings">
                     <input type="text"
@@ -788,7 +948,7 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                 <?php endif; ?>
 
                 <?php if (!empty($userSearchResults)) : ?>
-                <div class="table-responsive">
+                <div class="table-responsive mb-4">
                     <table class="table table-sm table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
@@ -801,11 +961,11 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </thead>
                         <tbody>
                             <?php foreach ($userSearchResults as $u) : ?>
-                            <?php
-                            $uId      = (int) $u['user_id'];
-                            $uIsAdmin = (int) ($u['user_is_admin'] ?? 0) === 1;
-                            $isSelf   = $uId === (int) ($auth?->currentUser()['user_id'] ?? 0);
-                            ?>
+                                <?php
+                                $uId      = (int) $u['user_id'];
+                                $uIsAdmin = (int) ($u['user_is_admin'] ?? 0) === 1;
+                                $isSelf   = $uId === (int) ($auth?->currentUser()['user_id'] ?? 0);
+                                ?>
                             <tr>
                                 <td><?= esc((string) ($u['email'] ?? '')) ?></td>
                                 <td class="text-body-secondary"><?= esc((string) ($u['display_name'] ?? '—')) ?></td>
@@ -844,6 +1004,184 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                     </table>
                 </div>
                 <?php endif; ?>
+
+                <!-- All users (paginated) -->
+                <?php
+                /**
+                 * Masks the domain part of an e-mail address for display.
+                 * user@example.com → user@***.com
+                 */
+                $maskEmailDomain = static function (string $email): string {
+                    $atPos = strpos($email, '@');
+                    if ($atPos === false) {
+                        return $email;
+                    }
+                    $local  = substr($email, 0, $atPos);
+                    $domain = substr($email, $atPos + 1);
+                    $dotPos = strrpos($domain, '.');
+                    $tld    = $dotPos !== false ? substr($domain, $dotPos) : '';
+                    return $local . '@***' . $tld;
+                };
+                ?>
+                <h3 class="h6 text-body-secondary mb-2">
+                    All Users
+                    <span class="badge text-bg-secondary ms-1"><?= $userListTotal ?></span>
+                </h3>
+                <?php if (!empty($userList)) : ?>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>E-mail</th>
+                                <th>Role</th>
+                                <th>Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($userList as $ul) : ?>
+                                <?php
+                                $ulEmail   = (string) ($ul['email'] ?? '');
+                                $ulIsAdmin = (int) ($ul['user_is_admin'] ?? 0) === 1;
+                                ?>
+                            <tr>
+                                <td class="font-monospace small"><?= esc($maskEmailDomain($ulEmail)) ?></td>
+                                <td>
+                                    <?php if ($ulIsAdmin) : ?>
+                                    <span class="badge text-bg-warning">Admin</span>
+                                    <?php else : ?>
+                                    <span class="badge text-bg-light border text-body-secondary">User</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-body-secondary small">
+                                    <?= esc(substr((string) ($ul['created_at'] ?? ''), 0, 10)) ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                    <?php if ($userListPages > 1) : ?>
+                <nav class="mt-3" aria-label="User list pagination">
+                    <ul class="pagination pagination-sm mb-0 flex-wrap">
+                        <?php if ($userListPage > 1) : ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?tab=settings&amp;user_page=<?= $userListPage - 1 ?>">&laquo;</a>
+                        </li>
+                        <?php endif; ?>
+                        <?php for ($p = 1; $p <= $userListPages; $p++) : ?>
+                        <li class="page-item <?= $p === $userListPage ? 'active' : '' ?>">
+                            <a class="page-link" href="?tab=settings&amp;user_page=<?= $p ?>"><?= $p ?></a>
+                        </li>
+                        <?php endfor; ?>
+                        <?php if ($userListPage < $userListPages) : ?>
+                        <li class="page-item">
+                            <a class="page-link" href="?tab=settings&amp;user_page=<?= $userListPage + 1 ?>">&raquo;</a>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+                    <?php endif; ?>
+                <?php else : ?>
+                <p class="text-body-secondary small mb-0">No users registered yet.</p>
+                <?php endif; ?>
+
+            </div>
+        </div>
+
+        <!-- WP–PHP Compatibility table -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>WP–PHP Compatibility</strong>
+                <div class="text-body-secondary small mt-1">
+                    Minimum PHP version required by each WordPress milestone.
+                    Used in the plugin Compatibility &amp; Requirements card.
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <?php
+                /** @var list<array{wp_version: string, php_min_version: string}> $wpCompatEntries */
+                $wpCompatEntries = $wpCompatEntries ?? [];
+                ?>
+                <?php if (empty($wpCompatEntries)) : ?>
+                <p class="text-body-secondary px-3 py-3 mb-0">No entries defined.</p>
+                <?php else : ?>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>WordPress</th>
+                                <th>Min PHP</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($wpCompatEntries as $wcRow) : ?>
+                            <tr>
+                                <form method="post" action="/admin/" class="d-contents">
+                                    <?= \PluginInsight\Csrf::field() ?>
+                                    <input type="hidden" name="action" value="wp_compat_upsert">
+                                    <input type="hidden" name="wp_version" value="<?= esc($wcRow['wp_version']) ?>">
+                                    <td><code><?= esc($wcRow['wp_version']) ?></code></td>
+                                    <td>
+                                        <input type="text"
+                                               name="php_min_version"
+                                               value="<?= esc($wcRow['php_min_version']) ?>"
+                                               class="form-control form-control-sm"
+                                               style="width:8rem"
+                                               pattern="^\d+(\.\d+)*$"
+                                               required
+                                               aria-label="PHP minimum for WP <?= esc($wcRow['wp_version']) ?>">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary me-1">Save</button>
+                                </form>
+                                    <form method="post" action="/admin/" class="d-inline"
+                                          onsubmit="return confirm('Delete WP <?= esc($wcRow['wp_version']) ?> entry?')">
+                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="wp_compat_delete">
+                                        <input type="hidden" name="wp_version" value="<?= esc($wcRow['wp_version']) ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                    </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+            <div class="card-footer">
+                <details>
+                    <summary class="text-body-secondary small" style="cursor:pointer">Add entry</summary>
+                    <form method="post" action="/admin/" class="mt-3 d-flex flex-wrap gap-2 align-items-end">
+                        <?= \PluginInsight\Csrf::field() ?>
+                        <input type="hidden" name="action" value="wp_compat_upsert">
+                        <div>
+                            <label class="form-label small mb-1" for="wc-add-wp">WordPress version</label>
+                            <input type="text"
+                                   id="wc-add-wp"
+                                   name="wp_version"
+                                   class="form-control form-control-sm"
+                                   style="width:9rem"
+                                   placeholder="e.g. 6.7"
+                                   pattern="^\d+(\.\d+)*$"
+                                   required>
+                        </div>
+                        <div>
+                            <label class="form-label small mb-1" for="wc-add-php">Min PHP version</label>
+                            <input type="text"
+                                   id="wc-add-php"
+                                   name="php_min_version"
+                                   class="form-control form-control-sm"
+                                   style="width:9rem"
+                                   placeholder="e.g. 7.4"
+                                   pattern="^\d+(\.\d+)*$"
+                                   required>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary">Add</button>
+                    </form>
+                </details>
             </div>
         </div>
 

@@ -196,7 +196,7 @@ class PluginResultRepository
             static fn (string $a, string $b): int => version_compare($b, $a)
         );
 
-        return array_values($versions);
+        return $versions;
     }
 
     /**
