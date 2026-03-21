@@ -1,0 +1,18 @@
+parameters:
+    level: 6
+    paths:
+        - index.php
+        - src/
+        - lang/
+    excludePaths:
+        - assets/
+        - templates/
+    bootstrapFiles:
+        - ../secrets.php
+        - src/I18n.php
+        - src/Router.php
+        - src/PluginRepository.php
+        - src/UserRepository.php
+        - src/Auth.php
+        - src/PasswordReset.php
+        - src/Csrf.php

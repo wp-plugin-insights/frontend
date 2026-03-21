@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<ruleset name="PluginInsight-Frontend">
+    <description>PSR-12 for the PluginInsight frontend PHP files.</description>
+
+    <file>index.php</file>
+    <file>src/</file>
+    <file>lang/</file>
+    <file>templates/</file>
+
+    <exclude-pattern>assets/</exclude-pattern>
+
+    <rule ref="PSR12"/>
+
+    <!--
+        index.php is a front controller: it intentionally both declares a
+        function (detectLocale) and executes side effects. Suppress the PSR1
+        symbol/side-effect warning for this file only.
+    -->
+    <rule ref="PSR1.Files.SideEffects">
+        <exclude-pattern>index\.php</exclude-pattern>
+    </rule>
+
+    <!--
+        Translation strings can legitimately exceed 120 characters.
+        Suppress the line-length warning for lang/ files.
+    -->
+    <rule ref="Generic.Files.LineLength">
+        <exclude-pattern>lang/</exclude-pattern>
+        <exclude-pattern>templates/</exclude-pattern>
+    </rule>
+</ruleset>

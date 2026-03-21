@@ -1,5 +1,25 @@
 /* PluginInsight — custom styles on top of Bootstrap 5 */
 
+/* ── Skip to main content ────────────────────────────────── */
+.skip-link {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    padding: .5rem 1rem;
+    background: var(--bs-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 .35rem 0;
+}
+
+/* ── Focus ring ───────────────────────────────────────────── */
+:focus-visible {
+    outline: 3px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
 /* ── Grade badges ─────────────────────────────────────────── */
 .grade {
     display: inline-flex;
@@ -21,43 +41,7 @@
 .grade-d { background-color: #e07b1a; }
 .grade-f { background-color: #d9322e; }
 
-/* Large variant used in the plugin detail header */
-.grade-lg {
-    width: 3.5rem;
-    height: 3.5rem;
-    font-size: 1.75rem;
-    border-radius: .5rem;
-}
-
-/* ── Mini-badge row on plugin cards ──────────────────────── */
-.grade-row {
-    display: flex;
-    gap: .35rem;
-    flex-wrap: wrap;
-}
-
-.grade-row .grade {
-    width: 1.6rem;
-    height: 1.6rem;
-    font-size: .8rem;
-    border-radius: .25rem;
-}
-
-/* ── Analysis card expand/collapse ───────────────────────── */
-.analysis-card .card-header {
-    cursor: pointer;
-    user-select: none;
-}
-
-.analysis-card .card-header .toggle-icon {
-    transition: transform .2s ease;
-}
-
-.analysis-card .card-header.collapsed .toggle-icon {
-    transform: rotate(-90deg);
-}
-
-/* ── Plugin slug always monospace ────────────────────────── */
+/* ── Plugin slug ──────────────────────────────────────────── */
 .plugin-slug {
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: .875em;
@@ -68,21 +52,52 @@
     padding: 4rem 0 3rem;
 }
 
-.hero .search-wrap {
+.search-wrap {
     max-width: 560px;
     margin: 0 auto;
 }
 
-/* ── Responsive plugin grid ──────────────────────────────── */
+/* ── Plugin cards (grid) ─────────────────────────────────── */
 .plugin-card {
     transition: box-shadow .15s ease;
 }
 
-.plugin-card:hover {
+.plugin-card:hover,
+.plugin-card:focus-within {
     box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .15);
 }
 
-/* ── Light/dark toggle ───────────────────────────────────── */
-#theme-toggle {
+/* ── Analysis card toggle button ─────────────────────────── */
+.card-header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: .75rem 1.25rem;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    color: inherit;
     cursor: pointer;
+    gap: .5rem;
+}
+
+.card-header-btn:hover {
+    background-color: rgba(0, 0, 0, .04);
+}
+
+.toggle-icon {
+    transition: transform .2s ease;
+    flex-shrink: 0;
+}
+
+.card-header-btn[aria-expanded="false"] .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* ── Language dropdown (scrollable) ─────────────────────── */
+.lang-scroll {
+    max-height: min(70vh, 24rem);
+    overflow-y: auto;
+    scroll-behavior: smooth;
 }

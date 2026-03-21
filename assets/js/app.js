@@ -10,14 +10,13 @@
     const html = document.documentElement;
     const btn  = document.getElementById('theme-toggle');
 
-    function getStored() {
-        return localStorage.getItem(STORAGE_KEY);
-    }
-
     function applyTheme(theme) {
         html.setAttribute('data-bs-theme', theme);
         if (btn) {
-            btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+            // Read labels from data attributes so they work for all languages
+            const labelLight = btn.dataset.labelLight || 'Switch to light mode';
+            const labelDark  = btn.dataset.labelDark  || 'Switch to dark mode';
+            btn.setAttribute('aria-label', theme === 'dark' ? labelLight : labelDark);
             btn.querySelector('.theme-icon-light').classList.toggle('d-none', theme === 'dark');
             btn.querySelector('.theme-icon-dark').classList.toggle('d-none', theme !== 'dark');
         }
@@ -31,38 +30,50 @@
     }
 
     // Initialise from storage or system preference
-    const stored   = getStored();
+    const stored   = localStorage.getItem(STORAGE_KEY);
     const prefDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     applyTheme(stored || (prefDark ? 'dark' : 'light'));
 
     if (btn) {
         btn.addEventListener('click', toggleTheme);
     }
+
+    // Keep in sync when the OS preference changes and no explicit choice is stored
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+        if (!localStorage.getItem(STORAGE_KEY)) {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
 }());
 
 /* ── Analysis card expand / collapse ─────────────────────── */
+/*
+ * Bootstrap's collapse plugin handles click + ARIA on <button> elements
+ * automatically. This block only syncs the .toggle-icon rotation class.
+ */
 (function () {
-    document.querySelectorAll('.analysis-card .card-header').forEach(function (header) {
-        header.addEventListener('click', function () {
-            const target = document.querySelector(header.dataset.bsTarget || header.getAttribute('data-bs-target'));
-            if (!target) return;
-            const isExpanded = header.getAttribute('aria-expanded') === 'true';
-            header.setAttribute('aria-expanded', String(!isExpanded));
-            header.classList.toggle('collapsed', isExpanded);
+    document.querySelectorAll('.analysis-card .collapse').forEach(function (panel) {
+        panel.addEventListener('show.bs.collapse', function () {
+            var btn = document.querySelector('[data-bs-target="#' + panel.id + '"]');
+            if (btn) { btn.setAttribute('aria-expanded', 'true'); }
+        });
+        panel.addEventListener('hide.bs.collapse', function () {
+            var btn = document.querySelector('[data-bs-target="#' + panel.id + '"]');
+            if (btn) { btn.setAttribute('aria-expanded', 'false'); }
         });
     });
 }());
 
-/* ── Homepage search (stub for Phase 1) ─────────────────── */
+/* ── Language switcher: scroll active item into view ──────── */
 (function () {
-    const form = document.getElementById('plugin-search-form');
-    if (!form) return;
-
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        const slug = form.querySelector('input[name="q"]').value.trim().toLowerCase().replace(/\s+/g, '-');
-        if (slug) {
-            window.location.href = 'plugin.html?slug=' + encodeURIComponent(slug);
-        }
-    });
+    var scroller = document.querySelector('.lang-scroll');
+    if (!scroller) { return; }
+    var active = scroller.querySelector('.dropdown-item.active');
+    if (active) {
+        // On dropdown open, scroll the selected language into view
+        scroller.closest('.dropdown').addEventListener('shown.bs.dropdown', function () {
+            active.scrollIntoView({ block: 'nearest' });
+            active.focus();
+        });
+    }
 }());
