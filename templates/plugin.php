@@ -134,54 +134,12 @@ $_compatPct        = match ($_compatGrade) {
 };
 
 // ── Overall grade (weighted) ─────────────────────────────────────────────────
-// Compute a weighted average across all runners that returned a result.
-// Compatibility and security runners carry more weight than style/i18n runners
-// so that a low translation score alone cannot pull the grade to F.
-//
-// Runners absent from the result set are excluded entirely (do not contribute 0).
-$_gradeWeights = [
-    'security'          => 3.0,
-    'php-compatibility' => 2.5,
-    'wp-since'          => 2.0,
-    'code-quality'      => 1.5,
-    'performance'       => 1.5,
-    'maintenance'       => 1.0,
-    'license'           => 0.8,
-    'translate'         => 0.5,
-    'translations'      => 0.5,
-];
-$_defaultWeight = 1.0;
-
-// Compat card always contributes to the overall grade (weight 2.0).
-$_weightedSum   = (float) $_compatPct * 2.0;
-$_weightTotal   = 2.0;
-foreach ($analysisResults as $_rSlug => $_runnerResult) {
-    $_pct = $_runnerResult['score']['percentage'] ?? null;
-    if (!is_int($_pct) && !is_float($_pct)) {
-        continue;
-    }
-    $_w            = (float) ($_gradeWeights[$_rSlug] ?? $_defaultWeight);
-    $_weightedSum += (float) $_pct * $_w;
-    $_weightTotal += $_w;
-}
-
-$_overallGrade      = '';
-$_overallPct        = null;
-$_overallGradeClass = '';
-if ($_weightTotal > 0.0) {
-    $_overallPct = (int) round($_weightedSum / $_weightTotal);
-    $_overallGrade = match (true) {
-        $_overallPct >= 90 => 'A',
-        $_overallPct >= 75 => 'B',
-        $_overallPct >= 60 => 'C',
-        $_overallPct >= 45 => 'D',
-        default            => 'F',
-    };
-    $_overallGradeClass = [
-        'A' => 'grade-a', 'B' => 'grade-b', 'C' => 'grade-c',
-        'D' => 'grade-d', 'F' => 'grade-f',
-    ][$_overallGrade] ?? 'grade-f';
-}
+// Delegated to GradeCalculator so the weighting logic lives in one place.
+$_gradeResult       = \PluginInsight\GradeCalculator::calculate($_compatGrade, $analysisResults);
+$_overallGrade      = $_gradeResult['grade'];
+$_overallPct        = $_gradeResult['pct'];
+$_overallGradeClass = $_gradeResult['css_class'];
+$_gradeBreakdown    = $_gradeResult['breakdown'];
 ?>
 
 <!-- ── Breadcrumb ────────────────────────────────────────── -->
@@ -321,6 +279,31 @@ if ($_weightTotal > 0.0) {
                 </div>
             </div>
         </div>
+        <?php if (!empty($_gradeBreakdown)) : ?>
+        <div class="border-top pt-3 mt-3 px-3 pb-1">
+            <p class="text-body-secondary small mb-2 fw-semibold">
+                <?php echo htmlspecialchars($i18n->t('plugin.grade_breakdown'), ENT_QUOTES, 'UTF-8') ?>
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+                <?php foreach ($_gradeBreakdown as $_be) : ?>
+                <div class="d-flex align-items-center gap-1 small <?php echo !$_be['scored'] ? 'opacity-50' : '' ?>">
+                    <span class="grade <?php echo htmlspecialchars($_be['css_class'], ENT_QUOTES, 'UTF-8') ?>"
+                          style="width:1.6rem;height:1.6rem;font-size:.75rem;line-height:1.6rem"
+                          title="<?php echo htmlspecialchars($_be['label'] . ': ' . $_be['grade'] . ' (' . $_be['pct'] . '%)', ENT_QUOTES, 'UTF-8') ?>"
+                          aria-label="<?php echo htmlspecialchars($_be['label'] . ' ' . $_be['grade'], ENT_QUOTES, 'UTF-8') ?>">
+                        <?php echo htmlspecialchars($_be['grade'], ENT_QUOTES, 'UTF-8') ?>
+                    </span>
+                    <span class="text-body-secondary">
+                        <?php echo htmlspecialchars($_be['label'], ENT_QUOTES, 'UTF-8') ?>
+                    </span>
+                    <?php if (!$_be['scored']) : ?>
+                    <span class="badge text-bg-secondary" style="font-size:.6rem">info</span>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </header>
 

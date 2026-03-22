@@ -11,6 +11,7 @@
  *   $queues              list<array<string, mixed>> — RabbitMQ queues (may be empty)
  *   $runnerStats         list<array<string, mixed>> — per-runner result counts + latest date
  *   $recentResults       list<array<string, mixed>> — 20 most recent pluginresult rows
+ *   $stuckQueued         list<array<string, mixed>> — queued uploads with no results yet
  *   $recentUploads       list<array<string, mixed>> — recent plugin_upload rows
  *   $uploadGrades        array<string, string>      — "{slug}:{version}" → grade letter
  *   $platformStats       array{plugin_count: int, version_count: int}
@@ -37,6 +38,7 @@ $successMessages = [
     'runner_restart'    => 'Runner restarted.',
     'runner_add'        => 'Runner created.',
     'runner_delete'     => 'Runner deleted.',
+    'runner_reorder'    => 'Runner order saved.',
     'upload_requeue'    => 'Upload requeued.',
     'queue_purge'       => 'Queue purged.',
     'user_admin'        => 'User admin status updated.',
@@ -357,10 +359,24 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                 <?php if (empty($runners)) : ?>
                 <p class="text-body-secondary px-3 py-3 mb-0">No runners defined yet.</p>
                 <?php else : ?>
+                <?php
+                /* The reorder form wraps no table rows (HTML5 form= attribute links
+                   inputs in the table rows to this out-of-flow form element). */
+                ?>
+                <form id="runner-order-form"
+                      method="post"
+                      action="/admin/"
+                      class="d-none">
+                    <?php echo \PluginInsight\Csrf::field() ?>
+                    <input type="hidden" name="action" value="runner_reorder">
+                </form>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
+                                <th style="width:3.5rem" title="Display order — 0 = last, alphabetical">
+                                    Order
+                                </th>
                                 <th>Name</th>
                                 <th>Slug</th>
                                 <th>Queue</th>
@@ -373,31 +389,43 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                 <?php
                                 $rId     = (int) $runner['runner_id'];
                                 $rActive = (int) $runner['runner_is_active'] === 1;
+                                $rOrder  = (int) $runner['runner_sort_order'];
                                 ?>
                             <tr>
-                                <td><?= esc((string) $runner['runner_name']) ?></td>
-                                <td><code><?= esc((string) $runner['runner_slug']) ?></code></td>
-                                <td><code><?= esc((string) $runner['runner_queue']) ?></code></td>
                                 <td>
-                                    <span class="badge <?= $rActive ? 'text-bg-success' : 'text-bg-secondary' ?>">
-                                        <?= $rActive ? 'Active' : 'Inactive' ?>
+                                    <input type="number"
+                                           form="runner-order-form"
+                                           name="runner_order[<?php echo $rId ?>]"
+                                           value="<?php echo $rOrder ?>"
+                                           min="0"
+                                           max="999"
+                                           class="form-control form-control-sm text-center"
+                                           style="width:3.5rem"
+                                           aria-label="Display order for <?php echo htmlspecialchars((string) $runner['runner_name'], ENT_QUOTES, 'UTF-8') ?>">
+                                </td>
+                                <td><?php echo htmlspecialchars((string) $runner['runner_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><code><?php echo htmlspecialchars((string) $runner['runner_slug'], ENT_QUOTES, 'UTF-8') ?></code></td>
+                                <td><code><?php echo htmlspecialchars((string) $runner['runner_queue'], ENT_QUOTES, 'UTF-8') ?></code></td>
+                                <td>
+                                    <span class="badge <?php echo $rActive ? 'text-bg-success' : 'text-bg-secondary' ?>">
+                                        <?php echo $rActive ? 'Active' : 'Inactive' ?>
                                     </span>
                                 </td>
                                 <td class="text-end">
                                     <form method="post" action="/admin/" class="d-inline">
-                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <?php echo \PluginInsight\Csrf::field() ?>
                                         <input type="hidden" name="action" value="runner_toggle">
-                                        <input type="hidden" name="runner_id" value="<?= $rId ?>">
-                                        <input type="hidden" name="runner_is_active" value="<?= $rActive ? 0 : 1 ?>">
+                                        <input type="hidden" name="runner_id" value="<?php echo $rId ?>">
+                                        <input type="hidden" name="runner_is_active" value="<?php echo $rActive ? 0 : 1 ?>">
                                         <button type="submit"
-                                                class="btn btn-sm <?= $rActive ? 'btn-outline-warning' : 'btn-outline-success' ?>">
-                                            <?= $rActive ? 'Deactivate' : 'Activate' ?>
+                                                class="btn btn-sm <?php echo $rActive ? 'btn-outline-warning' : 'btn-outline-success' ?>">
+                                            <?php echo $rActive ? 'Deactivate' : 'Activate' ?>
                                         </button>
                                     </form>
                                     <form method="post" action="/admin/" class="d-inline ms-1">
-                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <?php echo \PluginInsight\Csrf::field() ?>
                                         <input type="hidden" name="action" value="runner_restart">
-                                        <input type="hidden" name="runner_id" value="<?= $rId ?>">
+                                        <input type="hidden" name="runner_id" value="<?php echo $rId ?>">
                                         <button type="submit" class="btn btn-sm btn-outline-secondary"
                                                 title="Restart systemd service">
                                             <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
@@ -409,13 +437,24 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </tbody>
                     </table>
                 </div>
+                <div class="px-3 py-2 border-top d-flex align-items-center gap-2">
+                    <button type="submit"
+                            form="runner-order-form"
+                            class="btn btn-sm btn-primary">
+                        <i class="bi bi-sort-numeric-down me-1" aria-hidden="true"></i>Save order
+                    </button>
+                    <span class="text-body-secondary small">
+                        0 = unordered (shown last, alphabetically).
+                        Set 1, 2, 3… to pin runners in that position.
+                    </span>
+                </div>
                 <?php endif; ?>
             </div>
             <div class="card-footer">
                 <details>
                     <summary class="text-body-secondary small" style="cursor:pointer">Add runner</summary>
                     <form method="post" action="/admin/" class="mt-3 row g-2 align-items-end">
-                        <?= \PluginInsight\Csrf::field() ?>
+                        <?php echo \PluginInsight\Csrf::field() ?>
                         <input type="hidden" name="action" value="runner_add">
                         <div class="col-sm-4">
                             <label class="form-label small" for="runner_name">Name</label>
@@ -440,6 +479,89 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                         </div>
                     </form>
                 </details>
+            </div>
+        </div>
+
+        <!-- Stuck in Queue -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold d-flex align-items-center justify-content-between">
+                <span>
+                    <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Stuck in Queue
+                </span>
+                <?php if (!empty($stuckQueued)) : ?>
+                <span class="badge text-bg-warning"><?= count($stuckQueued) ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($stuckQueued)) : ?>
+                <p class="text-body-secondary px-3 py-3 mb-0">
+                    No uploads are currently stuck. All queued plugins have received at least one analysis result.
+                </p>
+                <?php else : ?>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Plugin</th>
+                                <th>Version</th>
+                                <th>UUID</th>
+                                <th>Queued at</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($stuckQueued as $sq) : ?>
+                                <?php
+                                $sqUuid        = (string) ($sq['upload_uuid']    ?? '');
+                                $sqSlug        = (string) ($sq['plugin_slug']    ?? '');
+                                $sqName        = (string) ($sq['plugin_name']    ?? $sqSlug);
+                                $sqVersion     = (string) ($sq['plugin_version'] ?? '');
+                                $sqQueuedAt    = (string) ($sq['uploaded_at']    ?? '');
+                                $sqQueuedTs    = $sqQueuedAt !== '' ? strtotime($sqQueuedAt) : 0;
+                                $sqCanResend   = $sqQueuedTs > 0 && (time() - $sqQueuedTs) >= 3600;
+                                $sqWaitMinutes = $sqQueuedTs > 0 ? (int) ((time() - $sqQueuedTs) / 60) : 0;
+                                ?>
+                            <tr>
+                                <td>
+                                    <?php if ($sqSlug !== '') : ?>
+                                    <a href="/api/<?= esc($sqUuid) ?>/" class="text-decoration-none">
+                                        <?= esc($sqName !== '' ? $sqName : $sqSlug) ?>
+                                    </a>
+                                    <?php else : ?>
+                                    <span class="text-body-secondary">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><code class="small"><?= esc($sqVersion) ?></code></td>
+                                <td><code class="small text-body-secondary"><?= esc(substr($sqUuid, 0, 8)) ?>…</code></td>
+                                <td class="small text-body-secondary">
+                                    <?= esc($sqQueuedAt) ?>
+                                    <?php if ($sqWaitMinutes > 0) : ?>
+                                    <span class="text-<?= $sqWaitMinutes >= 60 ? 'danger' : 'warning' ?>">
+                                        (<?= $sqWaitMinutes >= 60
+                                            ? (int) ($sqWaitMinutes / 60) . 'h ' . ($sqWaitMinutes % 60) . 'm'
+                                            : $sqWaitMinutes . 'm'
+                                        ?> ago)
+                                    </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <form method="post" action="/admin/" class="d-inline">
+                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="upload_requeue">
+                                        <input type="hidden" name="upload_uuid" value="<?= esc($sqUuid) ?>">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-warning"
+                                                <?= !$sqCanResend ? 'disabled title="Wait at least 1 hour before resending"' : '' ?>>
+                                            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Resend
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
 

@@ -18,7 +18,10 @@ class RunnerRepository
     }
 
     /**
-     * Returns all runners ordered by name.
+     * Returns all runners in display order.
+     *
+     * Runners with an explicit sort_order (> 0) come first, ascending.
+     * Runners with sort_order = 0 follow, sorted alphabetically by name.
      *
      * @return list<array<string, mixed>>
      */
@@ -26,9 +29,11 @@ class RunnerRepository
     {
         $result = $this->db->query(
             'SELECT runner_id, runner_name, runner_slug, runner_queue,
-                    runner_is_active, created_at
+                    runner_is_active, runner_sort_order, created_at
              FROM `runner`
-             ORDER BY runner_name'
+             ORDER BY (runner_sort_order = 0) ASC,
+                      runner_sort_order ASC,
+                      runner_name ASC'
         );
 
         $rows = [];
@@ -40,6 +45,31 @@ class RunnerRepository
         }
 
         return $rows;
+    }
+
+    /**
+     * Saves a display-order value for multiple runners in one transaction.
+     *
+     * @param array<int, int> $orders runner_id => sort_order (0 = unordered/last)
+     */
+    public function setOrders(array $orders): void
+    {
+        if (empty($orders)) {
+            return;
+        }
+
+        $stmt = $this->db->prepare(
+            'UPDATE `runner` SET runner_sort_order = ? WHERE runner_id = ?'
+        );
+
+        foreach ($orders as $runnerId => $order) {
+            $runnerId = (int) $runnerId;
+            $order    = max(0, (int) $order);
+            $stmt->bind_param('ii', $order, $runnerId);
+            $stmt->execute();
+        }
+
+        $stmt->close();
     }
 
     /**

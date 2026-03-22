@@ -26,6 +26,58 @@ class PluginResultRepository
     }
 
     /**
+     * Returns all runner results for a set of plugin IDs, grouped by plugin_id.
+     *
+     * Used by the home page to compute the real overall grade for each card
+     * without making a separate query per plugin.
+     *
+     * @param  list<int> $pluginIds
+     * @return array<int, array<string, array<string, mixed>>>  plugin_id → runner_slug → decoded result
+     */
+    public function getRunnerResultsByPluginIds(array $pluginIds): array
+    {
+        if (empty($pluginIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($pluginIds), '?'));
+        $stmt = $this->db->prepare(
+            "SELECT pr.plugin_id, r.runner_slug, r.runner_name, r.runner_sort_order,
+                    pr.pluginresult_result, pr.pluginresult_date
+             FROM pluginresult pr
+             JOIN runner r ON r.runner_id = pr.runner_id
+             WHERE pr.plugin_id IN ({$placeholders})
+             ORDER BY pr.pluginresult_date DESC"
+        );
+
+        $types = str_repeat('i', count($pluginIds));
+        $stmt->bind_param($types, ...$pluginIds);
+        $stmt->execute();
+
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        // Group: plugin_id → runner_slug → decoded result (most recent wins).
+        $byPlugin = [];
+        foreach (array_reverse($rows) as $row) {
+            $pid     = (int) $row['plugin_id'];
+            $slug    = (string) $row['runner_slug'];
+            $decoded = json_decode((string) $row['pluginresult_result'], true);
+
+            if (!is_array($decoded)) {
+                continue;
+            }
+
+            $decoded['_date']        = $row['pluginresult_date'];
+            $decoded['_runner_name'] = $row['runner_name'];
+            $decoded['_sort_order']  = (int) $row['runner_sort_order'];
+            $byPlugin[$pid][$slug]   = $decoded;
+        }
+
+        return $byPlugin;
+    }
+
+    /**
      * Returns a summary row for every runner that has produced at least one
      * result: result count and the date of the most recent result.
      *
@@ -202,6 +254,10 @@ class PluginResultRepository
     /**
      * Returns all results for a specific plugin + version, keyed by runner slug.
      *
+     * Results are sorted by runner_sort_order: runners with an explicit order
+     * (> 0) come first ascending; runners with sort_order = 0 follow, sorted
+     * alphabetically by runner name.
+     *
      * Used by the plugin detail page to render per-runner analysis cards.
      *
      * @return array<string, array<string, mixed>>  runner_slug → decoded result
@@ -209,7 +265,8 @@ class PluginResultRepository
     public function getByPluginVersion(int $pluginId, string $version): array
     {
         $stmt = $this->db->prepare(
-            'SELECT r.runner_slug, r.runner_name, pr.pluginresult_result, pr.pluginresult_date
+            'SELECT r.runner_slug, r.runner_name, r.runner_sort_order,
+                    pr.pluginresult_result, pr.pluginresult_date
              FROM pluginresult pr
              JOIN runner r ON r.runner_id = pr.runner_id
              WHERE pr.plugin_id = ?
@@ -222,16 +279,38 @@ class PluginResultRepository
         $rows   = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        // One result per runner slug (most recent wins, ORDER BY DESC + keyed overwrite)
+        // One result per runner slug (most recent wins, ORDER BY DESC + keyed overwrite).
         $bySlug = [];
         foreach (array_reverse($rows) as $row) {
             $decoded = json_decode((string) $row['pluginresult_result'], true);
             if (is_array($decoded)) {
-                $decoded['_date']        = $row['pluginresult_date'];
+                $decoded['_date']       = $row['pluginresult_date'];
                 $decoded['_runner_name'] = $row['runner_name'];
+                $decoded['_sort_order'] = (int) $row['runner_sort_order'];
                 $bySlug[(string) $row['runner_slug']] = $decoded;
             }
         }
+
+        // Sort: explicit order (> 0) ascending first, then unordered (0) alphabetically.
+        uasort($bySlug, static function (array $a, array $b): int {
+            $aOrder = (int) ($a['_sort_order'] ?? 0);
+            $bOrder = (int) ($b['_sort_order'] ?? 0);
+            $aZero  = $aOrder === 0 ? 1 : 0;
+            $bZero  = $bOrder === 0 ? 1 : 0;
+
+            if ($aZero !== $bZero) {
+                return $aZero - $bZero;
+            }
+
+            if ($aOrder !== $bOrder) {
+                return $aOrder - $bOrder;
+            }
+
+            return strcmp(
+                (string) ($a['_runner_name'] ?? ''),
+                (string) ($b['_runner_name'] ?? '')
+            );
+        });
 
         return $bySlug;
     }

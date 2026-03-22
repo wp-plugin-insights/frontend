@@ -67,6 +67,7 @@ return [
 
     // Plugin detail — overall grade + grade legend
     'plugin.overall_grade'    => 'Overall grade',
+    'plugin.grade_breakdown'  => 'Score breakdown',
     'plugin.grade_scale'      => 'Grade scale',
     'plugin.grade_a'          => 'Excellent',
     'plugin.grade_b'          => 'Good',

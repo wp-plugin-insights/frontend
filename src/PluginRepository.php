@@ -93,7 +93,8 @@ class PluginRepository
     public function getRecentAnalysed(int $limit = 12): array
     {
         $stmt = $this->db->prepare(
-            "SELECT p.plugin_slug,
+            "SELECT p.plugin_id,
+                    p.plugin_slug,
                     p.plugin_name,
                     p.plugin_version,
                     p.plugin_installs,
@@ -101,12 +102,10 @@ class PluginRepository
                     p.plugin_last_updated,
                     p.plugin_icons,
                     p.plugin_short_description,
-                    MAX(pr.pluginresult_date) AS latest_analysis,
-                    (SELECT JSON_VALUE(pr2.pluginresult_result, '$.score.grade')
-                     FROM pluginresult pr2
-                     WHERE pr2.plugin_id = p.plugin_id
-                     ORDER BY pr2.pluginresult_date DESC
-                     LIMIT 1) AS latest_grade
+                    p.plugin_requires,
+                    p.plugin_requires_php,
+                    p.plugin_tested,
+                    MAX(pr.pluginresult_date) AS latest_analysis
              FROM plugin p
              JOIN pluginresult pr ON pr.plugin_id = p.plugin_id
              WHERE p.plugin_source != 'api'

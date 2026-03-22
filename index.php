@@ -26,6 +26,7 @@ require_once __DIR__ . '/src/RabbitMqInfo.php';
 require_once __DIR__ . '/src/PluginResultRepository.php';
 require_once __DIR__ . '/src/CronRunRepository.php';
 require_once __DIR__ . '/src/WpCompatRepository.php';
+require_once __DIR__ . '/src/GradeCalculator.php';
 
 use PluginInsight\Auth;
 use PluginInsight\Csrf;
@@ -223,6 +224,40 @@ switch ($page) {
         $pageMetaDesc = $i18n->t('home.meta_desc');
         $plugins      = $repo !== null ? $repo->getRecentAnalysed(12) : [];
         $total        = $repo !== null ? $repo->getTotalCount() : 0;
+
+        // Compute the real overall grade for each home card using GradeCalculator
+        // so it matches the grade shown on the plugin detail page.
+        if (!empty($plugins) && $resultRepo !== null) {
+            $homePluginIds  = array_map('intval', array_column($plugins, 'plugin_id'));
+            $homeBatch      = $resultRepo->getRunnerResultsByPluginIds($homePluginIds);
+            $homeCompatRows = $wpCompatRepo !== null ? $wpCompatRepo->getAll() : [];
+            $homeLatestWpMinor = '';
+            if (!empty($wpVersions)) {
+                $homeLatestWpMinor = implode(
+                    '.',
+                    array_slice(explode('.', (string) $wpVersions[0]['version']), 0, 2)
+                );
+            }
+
+            foreach ($plugins as &$_p) {
+                $pId          = (int) ($_p['plugin_id'] ?? 0);
+                $pCompatGrade = \PluginInsight\GradeCalculator::compatGrade(
+                    (string) ($_p['plugin_requires']     ?? ''),
+                    (string) ($_p['plugin_requires_php'] ?? ''),
+                    (string) ($_p['plugin_tested']       ?? ''),
+                    (string) ($_p['plugin_last_updated'] ?? ''),
+                    $homeCompatRows,
+                    $homeLatestWpMinor
+                );
+                $pGradeResult         = \PluginInsight\GradeCalculator::calculate(
+                    $pCompatGrade,
+                    $homeBatch[$pId] ?? []
+                );
+                $_p['_computed_grade'] = $pGradeResult['grade'];
+            }
+            unset($_p);
+        }
+
         require __DIR__ . '/templates/home.php';
         break;
 
@@ -537,6 +572,23 @@ switch ($page) {
                 redirect('/admin/?success=api_settings&tab=settings');
             }
 
+            // ── Runner: reorder ──────────────────────────────────────────
+            if ($action === 'runner_reorder' && $runnerRepo !== null) {
+                $rawOrders = $_POST['runner_order'] ?? [];
+                if (is_array($rawOrders)) {
+                    $orders = [];
+                    foreach ($rawOrders as $rid => $ord) {
+                        $rid = (int) $rid;
+                        $ord = max(0, min(999, (int) $ord));
+                        if ($rid > 0) {
+                            $orders[$rid] = $ord;
+                        }
+                    }
+                    $runnerRepo->setOrders($orders);
+                }
+                redirect('/admin/?success=runner_reorder&tab=pipeline');
+            }
+
             // ── Runner: toggle active ────────────────────────────────────
             if ($action === 'runner_toggle' && $runnerRepo !== null) {
                 $runnerId = (int) ($_POST['runner_id'] ?? 0);
@@ -689,6 +741,9 @@ switch ($page) {
         // Platform stats (plugin/version/analysis counts)
         $platformStats  = $repo?->getStats()                 ?? ['plugin_count' => 0, 'version_count' => 0];
         $analysisStats  = $resultRepo?->getAnalysisStats()   ?? ['analyzed_plugins' => 0, 'total_results' => 0];
+
+        // Uploads stuck in 'queued' with no results
+        $stuckQueued = $uploadRepo?->getStuckQueued(50) ?? [];
 
         // Recent API uploads + grade enrichment
         $recentUploads = $uploadRepo?->getRecentForAdmin(20) ?? [];

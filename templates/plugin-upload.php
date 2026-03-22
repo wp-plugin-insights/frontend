@@ -32,7 +32,10 @@ $displayName = $name !== '' ? $name : ($slug !== '' ? $slug : $uuid);
 
 $apiUrl = 'https://api.plugininsight.com/' . htmlspecialchars($uuid, ENT_QUOTES, 'UTF-8') . '/';
 
-$isPending = in_array($status, ['pending', 'queued'], true);
+// Still pending only when no result has arrived yet.
+// Once at least one runner has produced a result, stop refreshing even if the
+// upload_status has not been updated to 'done' yet.
+$isPending = in_array($status, ['pending', 'queued'], true) && empty($analysisResults);
 
 // "Tested up to" badge — compare against live WP version data (same logic as plugin.php).
 $latestWpVersion = !empty($wpVersions) ? (string) $wpVersions[0]['version'] : '6.6';

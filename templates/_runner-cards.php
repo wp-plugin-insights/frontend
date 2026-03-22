@@ -82,10 +82,11 @@ if (empty($analysisResults)) :
         $_issues      = is_array($_result['issues']  ?? null) ? $_result['issues']  : [];
         $_iconClass   = $_runnerIcons[$_runnerSlug] ?? 'bi-bar-chart';
         $_gradeCs     = $_gradeClass[$_grade]       ?? '';
-        $_isPhpCompat  = ($_runnerSlug === 'php-compatibility');
-        $_isTranslate  = ($_runnerSlug === 'translate' || $_runnerSlug === 'translations');
-        $_isWpSince    = ($_runnerSlug === 'wp-since');
-        $_isHooks      = ($_runnerSlug === 'hooks');
+        $_isPhpCompat        = ($_runnerSlug === 'php-compatibility');
+        $_isTranslate        = ($_runnerSlug === 'translate' || $_runnerSlug === 'translations');
+        $_isWpSince          = ($_runnerSlug === 'wp-since');
+        $_isHooks            = ($_runnerSlug === 'hooks');
+        $_isCodingStandards  = ($_runnerSlug === 'coding-standards');
 
         // ── php-compatibility: grade adjustment ───────────────────────────
         // The runner computes its grade without knowing the WP-required PHP floor.
@@ -303,6 +304,12 @@ if (empty($analysisResults)) :
                 'unique_actions_used', 'unique_filters_used',
                 'unique_actions_provided', 'unique_filters_provided',
             ];
+            $_csKeys = [
+                'total_errors', 'total_warnings', 'total_fixable',
+                'files_with_issues', 'scanned_files', 'php_files',
+                'php_non_empty_lines', 'weighted_issue_points',
+                'issue_density_per_100_lines', 'summary',
+            ];
 
             // Split metrics into scalar (display as stat boxes) and array (display as tag lists),
             // skipping keys rendered separately by dedicated blocks.
@@ -319,6 +326,9 @@ if (empty($analysisResults)) :
                     continue;
                 }
                 if ($_isHooks && in_array($_mk, $_hooksKeys, true)) {
+                    continue;
+                }
+                if ($_isCodingStandards && in_array($_mk, $_csKeys, true)) {
                     continue;
                 }
                 if (is_array($_mv)) {
@@ -1094,6 +1104,87 @@ if (empty($analysisResults)) :
                 <?php endif; ?>
             <?php endif; // $_isTranslate ?>
 
+            <?php if ($_isCodingStandards) :
+                // ── coding-standards dedicated block ──────────────────────
+                $_csErrors    = isset($_metrics['total_errors'])    ? (int) $_metrics['total_errors']    : 0;
+                $_csWarnings  = isset($_metrics['total_warnings'])  ? (int) $_metrics['total_warnings']  : 0;
+                $_csFixable   = isset($_metrics['total_fixable'])   ? (int) $_metrics['total_fixable']   : 0;
+                $_csFiles     = isset($_metrics['files_with_issues']) ? (int) $_metrics['files_with_issues'] : 0;
+                $_csScanned   = isset($_metrics['scanned_files'])   ? (int) $_metrics['scanned_files']   : 0;
+                $_csDensity   = isset($_metrics['issue_density_per_100_lines'])
+                    ? number_format((float) $_metrics['issue_density_per_100_lines'], 2) : '0.00';
+                $_csSummary   = (string) ($_metrics['summary'] ?? '');
+                $_csDetails   = is_array($_result['details'] ?? null) ? $_result['details'] : [];
+                $_csBySource  = is_array($_csDetails['issue_counts_by_source'] ?? null)
+                    ? $_csDetails['issue_counts_by_source'] : [];
+                // Sort by count descending, exclude internal sniff entries
+                arsort($_csBySource);
+                $_csBySourceFiltered = array_filter(
+                    $_csBySource,
+                    static fn ($k) => !str_starts_with((string) $k, 'Internal.'),
+                    ARRAY_FILTER_USE_KEY
+                );
+            ?>
+            <div class="mb-3">
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                    <div class="text-center">
+                        <div class="fw-bold fs-5 <?= $_csErrors > 0 ? 'text-danger' : 'text-body-secondary' ?>">
+                            <?= $_csErrors ?>
+                        </div>
+                        <div class="small text-body-secondary">errors</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold fs-5 <?= $_csWarnings > 0 ? 'text-warning' : 'text-body-secondary' ?>">
+                            <?= $_csWarnings ?>
+                        </div>
+                        <div class="small text-body-secondary">warnings</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold fs-5"><?= $_csFiles ?></div>
+                        <div class="small text-body-secondary">files with issues</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold fs-5"><?= $_csScanned ?></div>
+                        <div class="small text-body-secondary">files scanned</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold fs-5"><?= htmlspecialchars($_csDensity, ENT_QUOTES, 'UTF-8') ?></div>
+                        <div class="small text-body-secondary">issues / 100 lines</div>
+                    </div>
+                    <?php if ($_csFixable > 0) : ?>
+                    <div class="text-center">
+                        <div class="fw-bold fs-5 text-success"><?= $_csFixable ?></div>
+                        <div class="small text-body-secondary">auto-fixable</div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php if ($_csSummary !== '') : ?>
+                <p class="small text-body-secondary mb-0"><?= htmlspecialchars($_csSummary, ENT_QUOTES, 'UTF-8') ?></p>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($_csBySourceFiltered)) : ?>
+            <div class="mb-3">
+                <h3 class="h6 text-body-secondary mb-2">Issues by rule</h3>
+                <div class="table-responsive">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <?php foreach ($_csBySourceFiltered as $_csRule => $_csCount) : ?>
+                            <tr>
+                                <td class="py-1 ps-0">
+                                    <code class="small"><?= htmlspecialchars((string) $_csRule, ENT_QUOTES, 'UTF-8') ?></code>
+                                </td>
+                                <td class="py-1 pe-0 text-end" style="width:3rem">
+                                    <span class="badge text-bg-secondary"><?= (int) $_csCount ?></span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php endif; ?>
+            <?php endif; // $_isCodingStandards ?>
+
             <?php if (!empty($_metricsScalar) || !empty($_metricsArray)) : ?>
             <div class="mb-3">
                 <h3 class="h6 text-body-secondary mb-2"><?= htmlspecialchars($i18n->t('plugin.metrics_title'), ENT_QUOTES, 'UTF-8') ?></h3>
@@ -1150,7 +1241,7 @@ if (empty($analysisResults)) :
                             continue;
                         }
                         if ($_isPhpCompatFmt) {
-                            // php-compatibility runner format
+                            // php-compatibility / coding-standards runner format
                             $_rawType  = strtolower((string) ($_issue['type'] ?? 'warning'));
                             $_sev      = $_rawType;
                             $_msg      = (string) ($_issue['message'] ?? '');
@@ -1158,9 +1249,20 @@ if (empty($analysisResults)) :
                             $_file     = (string) ($_issue['file']    ?? '');
                             $_line     = isset($_issue['line'])   ? (int) $_issue['line']   : null;
                             $_col      = isset($_issue['column']) ? (int) $_issue['column'] : null;
+                            // For coding-standards, strip the extraction prefix to show
+                            // a relative path (e.g. "includes/class-foo.php") instead of basename.
+                            if ($_isCodingStandards && str_contains($_file, '/extracted/')) {
+                                $_fileParts = explode('/extracted/', $_file, 2);
+                                if (count($_fileParts) === 2) {
+                                    $_fileSegs = explode('/', $_fileParts[1], 3);
+                                    if (count($_fileSegs) === 3) {
+                                        $_file = $_fileSegs[2];
+                                    }
+                                }
+                            }
                             $_locParts = [];
                             if ($_file !== '') {
-                                $_locParts[] = basename($_file);
+                                $_locParts[] = $_isCodingStandards ? $_file : basename($_file);
                             }
                             if ($_line !== null) {
                                 $_locParts[] = 'line ' . $_line . ($_col !== null ? ':' . $_col : '');

@@ -73,7 +73,7 @@ declare(strict_types=1);
             if ($pIconUrl !== '' && !str_starts_with($pIconUrl, 'https://')) {
                 $pIconUrl = '';
             }
-            $pGrade    = strtolower((string) ($p['latest_grade'] ?? ''));
+            $pGrade    = strtolower((string) ($p['_computed_grade'] ?? ''));
             $pAnalysis = (string) ($p['latest_analysis'] ?? '');
             ?>
         <div class="col-12 col-sm-6 col-lg-4">
