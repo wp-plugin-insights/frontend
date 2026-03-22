@@ -160,7 +160,9 @@ $_gradeBreakdown    = $_gradeResult['breakdown'];
 <header class="container mt-3 mb-4">
     <div class="card">
         <div class="card-body">
-            <div class="d-flex align-items-start gap-3 flex-wrap">
+
+            <!-- Row 1: icon · identity block · grade ─────────────────── -->
+            <div class="d-flex align-items-start gap-3">
                 <?php if ($iconUrl !== '') : ?>
                 <img src="<?php echo htmlspecialchars($iconUrl, ENT_QUOTES, 'UTF-8') ?>"
                      alt=""
@@ -170,113 +172,124 @@ $_gradeBreakdown    = $_gradeResult['breakdown'];
                      loading="lazy"
                      aria-hidden="true">
                 <?php endif; ?>
-                <div class="flex-grow-1">
-                <?php if ($_overallGrade !== '') : ?>
-                <div class="float-end ms-3 text-center flex-shrink-0">
-                    <div class="grade <?php echo htmlspecialchars($_overallGradeClass, ENT_QUOTES, 'UTF-8') ?>"
-                         style="width:3.5rem;height:3.5rem;font-size:1.6rem;line-height:3.5rem"
-                         aria-label="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ' ' . $_overallGrade, ENT_QUOTES, 'UTF-8') ?>"
-                         title="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ': ' . $_overallGrade . ' (' . $_overallPct . '%)', ENT_QUOTES, 'UTF-8') ?>">
-                        <?php echo htmlspecialchars($_overallGrade, ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                    <div class="text-body-secondary small mt-1">
-                        <?php echo htmlspecialchars($_overallPct . '%', ENT_QUOTES, 'UTF-8') ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                    <h1 class="h3 fw-bold mb-1">
-                        <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>
-                    </h1>
-                    <div class="mb-1">
-                        <code class="plugin-slug text-body-secondary">
-                            <?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>
-                        </code>
-                    </div>
-                    <?php if ($shortDesc !== '') : ?>
-                    <p class="text-body-secondary small mb-2">
-                        <?php echo htmlspecialchars($shortDesc, ENT_QUOTES, 'UTF-8') ?>
-                    </p>
-                    <?php endif; ?>
-                    <div class="d-flex flex-wrap gap-3 text-body-secondary small align-items-center">
-                        <?php if ($hasMultipleVersions) : ?>
-                        <span class="d-flex align-items-center gap-1">
-                            <i class="bi bi-tag me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.version'), ENT_QUOTES, 'UTF-8') ?>
-                            <select id="version-picker"
-                                    class="form-select form-select-sm d-inline-block w-auto"
-                                    aria-label="<?php echo htmlspecialchars($i18n->t('plugin.version_picker_label'), ENT_QUOTES, 'UTF-8') ?>">
-                                <?php foreach ($analysedVersions as $_pv) : ?>
-                                <option value="<?php echo htmlspecialchars($_pv, ENT_QUOTES, 'UTF-8') ?>"
-                                        <?php echo $_pv === $selectedVersion ? 'selected' : '' ?>>
-                                    <?php echo htmlspecialchars($_pv, ENT_QUOTES, 'UTF-8') ?>
-                                    <?php if ($_pv === $version) : ?>
-                                    (<?php echo htmlspecialchars($i18n->t('plugin.version_current'), ENT_QUOTES, 'UTF-8') ?>)
-                                    <?php endif; ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </span>
-                        <?php elseif ($version !== '') : ?>
-                        <span>
-                            <i class="bi bi-tag me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.version'), ENT_QUOTES, 'UTF-8') ?>
-                            <?php echo htmlspecialchars($version, ENT_QUOTES, 'UTF-8') ?>
-                        </span>
-                        <?php endif; ?>
-                        <?php if ($lastUpdated !== '') : ?>
-                        <span>
-                            <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>
-                            <?php echo htmlspecialchars($i18n->t('plugin.updated'), ENT_QUOTES, 'UTF-8') ?>
-                            <time datetime="<?php echo htmlspecialchars(substr($lastUpdated, 0, 10), ENT_QUOTES, 'UTF-8') ?>">
-                                <?php echo htmlspecialchars($i18n->date($lastUpdated), ENT_QUOTES, 'UTF-8') ?>
-                            </time>
-                        </span>
-                        <?php endif; ?>
-                        <?php if ($downloaded > 0) : ?>
-                        <span>
-                            <i class="bi bi-download me-1" aria-hidden="true"></i>
-                            <?php echo htmlspecialchars($i18n->number($downloaded), ENT_QUOTES, 'UTF-8') ?>+
-                            <?php echo htmlspecialchars($i18n->t('plugin.downloads'), ENT_QUOTES, 'UTF-8') ?>
-                        </span>
-                        <?php endif; ?>
-                        <?php if ($installs > 0) : ?>
-                        <span>
-                            <i class="bi bi-people me-1" aria-hidden="true"></i>
-                            <?php echo htmlspecialchars($i18n->number($installs), ENT_QUOTES, 'UTF-8') ?>+
-                            <?php echo htmlspecialchars($i18n->t('plugin.active_installs'), ENT_QUOTES, 'UTF-8') ?>
-                        </span>
-                        <?php endif; ?>
-                        <?php if ($authorName !== '') : ?>
-                        <span>
-                            <i class="bi bi-person me-1" aria-hidden="true"></i>
-                            <?php echo htmlspecialchars($i18n->t('plugin.author'), ENT_QUOTES, 'UTF-8') ?>:
-                            <?php if ($authorProfile !== '') : ?>
-                            <a href="<?php echo htmlspecialchars($authorProfile, ENT_QUOTES, 'UTF-8') ?>"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               class="text-decoration-none"
-                               aria-label="<?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?> (opens in new tab)">
-                                <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
-                            </a>
-                            <?php else : ?>
-                                <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
+
+                <!-- Identity: name / slug / description -->
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div class="min-w-0">
+                            <h1 class="h3 fw-bold mb-1">
+                                <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?>
+                            </h1>
+                            <div class="mb-1">
+                                <code class="plugin-slug text-body-secondary">
+                                    <?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>
+                                </code>
+                            </div>
+                            <?php if ($shortDesc !== '') : ?>
+                            <p class="text-body-secondary small mb-0">
+                                <?php echo htmlspecialchars($shortDesc, ENT_QUOTES, 'UTF-8') ?>
+                            </p>
                             <?php endif; ?>
-                        </span>
+                        </div>
+
+                        <!-- Grade badge — always top-right, never wraps with meta -->
+                        <?php if ($_overallGrade !== '') : ?>
+                        <div class="flex-shrink-0 text-center">
+                            <div class="grade <?php echo htmlspecialchars($_overallGradeClass, ENT_QUOTES, 'UTF-8') ?>"
+                                 style="width:3.5rem;height:3.5rem;font-size:1.6rem;line-height:3.5rem"
+                                 aria-label="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ' ' . $_overallGrade, ENT_QUOTES, 'UTF-8') ?>"
+                                 title="<?php echo htmlspecialchars($i18n->t('plugin.overall_grade') . ': ' . $_overallGrade . ' (' . $_overallPct . '%)', ENT_QUOTES, 'UTF-8') ?>">
+                                <?php echo htmlspecialchars($_overallGrade, ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                            <div class="text-body-secondary small mt-1">
+                                <?php echo htmlspecialchars($_overallPct . '%', ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                        </div>
                         <?php endif; ?>
-                        <?php if ($source !== '') : ?>
-                        <span>
-                            <i class="bi bi-database me-1" aria-hidden="true"></i>
-                            <?php echo htmlspecialchars($i18n->t('plugin.source'), ENT_QUOTES, 'UTF-8') ?>:
-                            <?php echo htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>
-                        </span>
-                        <?php endif; ?>
-                        <a href="https://wordpress.org/plugins/<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>/"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           class="text-decoration-none"
-                           aria-label="<?php echo htmlspecialchars($i18n->t('plugin.wp_org_link'), ENT_QUOTES, 'UTF-8') ?> <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?> (opens in new tab)">
-                            <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.wp_org_link'), ENT_QUOTES, 'UTF-8') ?>
-                        </a>
                     </div>
+
                 </div>
+            </div>
+
+            <!-- Row 2: meta-data — full card width, always below icon/title/grade -->
+            <div class="d-flex flex-wrap gap-3 text-body-secondary small align-items-center mt-3 pt-3 border-top">
+                <?php if ($hasMultipleVersions) : ?>
+                <span class="d-flex align-items-center gap-1">
+                    <i class="bi bi-tag me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.version'), ENT_QUOTES, 'UTF-8') ?>
+                    <select id="version-picker"
+                            class="form-select form-select-sm d-inline-block w-auto"
+                            aria-label="<?php echo htmlspecialchars($i18n->t('plugin.version_picker_label'), ENT_QUOTES, 'UTF-8') ?>">
+                        <?php foreach ($analysedVersions as $_pv) : ?>
+                        <option value="<?php echo htmlspecialchars($_pv, ENT_QUOTES, 'UTF-8') ?>"
+                                <?php echo $_pv === $selectedVersion ? 'selected' : '' ?>>
+                            <?php echo htmlspecialchars($_pv, ENT_QUOTES, 'UTF-8') ?>
+                            <?php if ($_pv === $version) : ?>
+                            (<?php echo htmlspecialchars($i18n->t('plugin.version_current'), ENT_QUOTES, 'UTF-8') ?>)
+                            <?php endif; ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </span>
+                <?php elseif ($version !== '') : ?>
+                <span>
+                    <i class="bi bi-tag me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.version'), ENT_QUOTES, 'UTF-8') ?>
+                    <?php echo htmlspecialchars($version, ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($lastUpdated !== '') : ?>
+                <span>
+                    <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('plugin.updated'), ENT_QUOTES, 'UTF-8') ?>
+                    <time datetime="<?php echo htmlspecialchars(substr($lastUpdated, 0, 10), ENT_QUOTES, 'UTF-8') ?>">
+                        <?php echo htmlspecialchars($i18n->date($lastUpdated), ENT_QUOTES, 'UTF-8') ?>
+                    </time>
+                </span>
+                <?php endif; ?>
+                <?php if ($downloaded > 0) : ?>
+                <span>
+                    <i class="bi bi-download me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->number($downloaded), ENT_QUOTES, 'UTF-8') ?>+
+                    <?php echo htmlspecialchars($i18n->t('plugin.downloads'), ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($installs > 0) : ?>
+                <span>
+                    <i class="bi bi-people me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->number($installs), ENT_QUOTES, 'UTF-8') ?>+
+                    <?php echo htmlspecialchars($i18n->t('plugin.active_installs'), ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($authorName !== '') : ?>
+                <span>
+                    <i class="bi bi-person me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('plugin.author'), ENT_QUOTES, 'UTF-8') ?>:
+                    <?php if ($authorProfile !== '') : ?>
+                    <a href="<?php echo htmlspecialchars($authorProfile, ENT_QUOTES, 'UTF-8') ?>"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="text-decoration-none"
+                       aria-label="<?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?> (opens in new tab)">
+                        <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
+                    </a>
+                    <?php else : ?>
+                        <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8') ?>
+                    <?php endif; ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($source !== '') : ?>
+                <span>
+                    <i class="bi bi-database me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('plugin.source'), ENT_QUOTES, 'UTF-8') ?>:
+                    <?php echo htmlspecialchars($source, ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php endif; ?>
+                <a href="https://wordpress.org/plugins/<?php echo htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?>/"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="text-decoration-none"
+                   aria-label="<?php echo htmlspecialchars($i18n->t('plugin.wp_org_link'), ENT_QUOTES, 'UTF-8') ?> <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?> (opens in new tab)">
+                    <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('plugin.wp_org_link'), ENT_QUOTES, 'UTF-8') ?>
+                </a>
             </div>
         </div>
         <?php if (!empty($_gradeBreakdown)) : ?>

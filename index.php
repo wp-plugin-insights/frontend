@@ -138,7 +138,8 @@ function detectLocale(?array $user): string
     // 4. Accept-Language header (match first tag segment)
     $header = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
     foreach (explode(',', $header) as $part) {
-        $lang = strtolower(substr(trim(strtok($part, ';')), 0, 2));
+        $tok  = strtok($part, ';');
+        $lang = strtolower(substr(trim($tok !== false ? $tok : ''), 0, 2));
         if (in_array($lang, $supported, true)) {
             return $lang;
         }

@@ -87,6 +87,7 @@ if (empty($analysisResults)) :
         $_isWpSince          = ($_runnerSlug === 'wp-since');
         $_isHooks            = ($_runnerSlug === 'hooks');
         $_isCodingStandards  = ($_runnerSlug === 'coding-standards');
+        $_isSecurity         = ($_runnerSlug === 'security');
 
         // ── php-compatibility: grade adjustment ───────────────────────────
         // The runner computes its grade without knowing the WP-required PHP floor.
@@ -163,10 +164,10 @@ if (empty($analysisResults)) :
             }
         }
 
-        // Translate and hooks runners: issues is an associative object {high,medium,low,trivial,top:[...]}
+        // Translate, hooks, and security runners: issues is an associative object {high,medium,low,trivial,top:[...]}
         // Extract the top-issues list and suppress the generic issues loop.
         $_translateIssueCounts = [];
-        if (($_isTranslate || $_isHooks) && isset($_issues['top'])) {
+        if (($_isTranslate || $_isHooks || $_isSecurity) && isset($_issues['top'])) {
             $_translateIssueCounts = $_issues;
             $_issues               = [];
         }
@@ -260,7 +261,7 @@ if (empty($analysisResults)) :
 
             <?php
             // Dedicated blocks below handle their own summaries; suppress generic reasoning.
-            $_showReasoning = $_reasoning !== '' && !$_isPhpCompat && !$_isTranslate && !$_isWpSince && !$_isHooks;
+            $_showReasoning = $_reasoning !== '' && !$_isPhpCompat && !$_isTranslate && !$_isWpSince && !$_isHooks && !$_isSecurity;
             ?>
             <?php if ($_percentage !== null || $_showReasoning) : ?>
             <div class="mb-3">
@@ -310,6 +311,11 @@ if (empty($analysisResults)) :
                 'php_non_empty_lines', 'weighted_issue_points',
                 'issue_density_per_100_lines', 'summary',
             ];
+            $_secKeys = [
+                'files_total', 'files_selected', 'files_analyzed', 'files_skipped',
+                'batches_total', 'batches_failed', 'findings_total', 'findings_critical',
+                'findings_error', 'findings_warning', 'findings_info',
+            ];
 
             // Split metrics into scalar (display as stat boxes) and array (display as tag lists),
             // skipping keys rendered separately by dedicated blocks.
@@ -329,6 +335,9 @@ if (empty($analysisResults)) :
                     continue;
                 }
                 if ($_isCodingStandards && in_array($_mk, $_csKeys, true)) {
+                    continue;
+                }
+                if ($_isSecurity && in_array($_mk, $_secKeys, true)) {
                     continue;
                 }
                 if (is_array($_mv)) {
@@ -1184,6 +1193,228 @@ if (empty($analysisResults)) :
             </div>
             <?php endif; ?>
             <?php endif; // $_isCodingStandards ?>
+
+            <?php if ($_isSecurity) :
+                // ── security dedicated block ───────────────────────────────
+                $_secDetails    = is_array($_result['details'] ?? null) ? $_result['details'] : [];
+                $_secFindings   = is_array($_secDetails['findings'] ?? null) ? $_secDetails['findings'] : [];
+                $_secPresent    = is_array($_result['presentation'] ?? null) ? $_result['presentation'] : [];
+                $_secAnaldRows  = is_array($_secPresent['analyzed_files']['rows'] ?? null)
+                    ? $_secPresent['analyzed_files']['rows'] : [];
+
+                $_secFilesAnalyzed = isset($_metrics['files_analyzed'])  ? (int) $_metrics['files_analyzed']  : 0;
+                $_secFilesTotal    = isset($_metrics['files_total'])      ? (int) $_metrics['files_total']     : 0;
+                $_secFindingsCrit  = isset($_metrics['findings_critical']) ? (int) $_metrics['findings_critical'] : 0;
+                $_secFindingsErr   = isset($_metrics['findings_error'])   ? (int) $_metrics['findings_error']  : 0;
+                $_secFindingsWarn  = isset($_metrics['findings_warning']) ? (int) $_metrics['findings_warning'] : 0;
+                $_secFindingsInfo  = isset($_metrics['findings_info'])    ? (int) $_metrics['findings_info']   : 0;
+
+                // Split into warnings (problems) and positive (pass) findings.
+                $_secWarnFindings = [];
+                $_secPassFindings = [];
+                foreach ($_secFindings as $_sfItem) {
+                    if (!is_array($_sfItem)) {
+                        continue;
+                    }
+                    if ((string) ($_sfItem['status'] ?? '') === 'pass') {
+                        $_secPassFindings[] = $_sfItem;
+                    } else {
+                        $_secWarnFindings[] = $_sfItem;
+                    }
+                }
+
+                $_secPassColId  = htmlspecialchars($_cardId . '-sec-pass',  ENT_QUOTES, 'UTF-8');
+                $_secFilesColId = htmlspecialchars($_cardId . '-sec-files', ENT_QUOTES, 'UTF-8');
+                ?>
+
+            <!-- Reasoning -->
+                <?php if ($_reasoning !== '') : ?>
+            <p class="small mb-3"><?php echo htmlspecialchars($_reasoning, ENT_QUOTES, 'UTF-8') ?></p>
+                <?php endif; ?>
+
+            <!-- Quick stats -->
+            <div class="d-flex flex-wrap gap-3 mb-3">
+                <div class="text-center">
+                    <div class="fw-bold fs-5">
+                        <?php echo htmlspecialchars($_secFilesAnalyzed . '/' . $_secFilesTotal, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.sec_files_analyzed'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <?php if ($_secFindingsCrit > 0) : ?>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 text-danger"><?php echo htmlspecialchars((string) $_secFindingsCrit, ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.sec_critical'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <?php endif; ?>
+                <?php if ($_secFindingsErr > 0) : ?>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 text-danger"><?php echo htmlspecialchars((string) $_secFindingsErr, ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.sec_errors'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <?php endif; ?>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 <?php echo $_secFindingsWarn > 0 ? 'text-warning' : 'text-body-secondary' ?>">
+                        <?php echo htmlspecialchars((string) $_secFindingsWarn, ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.sec_warnings'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 <?php echo count($_secPassFindings) > 0 ? 'text-success' : 'text-body-secondary' ?>">
+                        <?php echo htmlspecialchars((string) count($_secPassFindings), ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.sec_positive'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+            </div>
+
+            <!-- Warning findings -->
+                <?php if (!empty($_secWarnFindings)) : ?>
+            <div class="mb-3">
+                <h3 class="h6 text-body-secondary mb-2">
+                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('runner.sec_findings'), ENT_QUOTES, 'UTF-8') ?>
+                    <span class="badge text-bg-warning ms-1"><?php echo count($_secWarnFindings) ?></span>
+                </h3>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                    <?php foreach ($_secWarnFindings as $_sf) :
+                        $_sfSev     = strtolower((string) ($_sf['severity'] ?? 'warning'));
+                        $_sfName    = (string) ($_sf['name']    ?? '');
+                        $_sfSummary = (string) ($_sf['summary'] ?? '');
+                        $_sfDets    = is_array($_sf['details'] ?? null) ? $_sf['details'] : [];
+                        $_sfFile    = (string) ($_sfDets['file']           ?? '');
+                        $_sfLine    = isset($_sfDets['line']) && (int) $_sfDets['line'] > 0
+                            ? (int) $_sfDets['line'] : null;
+                        $_sfReco    = (string) ($_sfDets['recommendation'] ?? '');
+                        $_sfBadge   = match ($_sfSev) {
+                            'critical', 'error' => 'text-bg-danger',
+                            'warning'           => 'text-bg-warning',
+                            default             => 'text-bg-secondary',
+                        };
+                        ?>
+                    <li class="border-bottom pb-2">
+                        <div class="d-flex align-items-start gap-2">
+                            <span class="badge <?php echo htmlspecialchars($_sfBadge, ENT_QUOTES, 'UTF-8') ?> mt-1 flex-shrink-0">
+                                <?php echo htmlspecialchars($_sfSev, ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                            <div class="small flex-grow-1 min-w-0">
+                                <?php if ($_sfName !== '') : ?>
+                                <code class="plugin-slug d-block mb-1">
+                                    <?php echo htmlspecialchars($_sfName, ENT_QUOTES, 'UTF-8') ?>
+                                </code>
+                                <?php endif; ?>
+                                <?php echo htmlspecialchars($_sfSummary, ENT_QUOTES, 'UTF-8') ?>
+                                <?php if ($_sfFile !== '' || $_sfLine !== null) : ?>
+                                <div class="text-body-secondary mt-1">
+                                    <code class="plugin-slug">
+                                        <?php echo htmlspecialchars(
+                                            $_sfFile . ($_sfLine !== null ? ':' . $_sfLine : ''),
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        ) ?>
+                                    </code>
+                                </div>
+                                <?php endif; ?>
+                                <?php if ($_sfReco !== '') : ?>
+                                <p class="text-body-secondary fst-italic mb-0 mt-1">
+                                    <?php echo htmlspecialchars($_sfReco, ENT_QUOTES, 'UTF-8') ?>
+                                </p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+                <?php endif; ?>
+
+            <!-- Positive findings (collapsed) -->
+                <?php if (!empty($_secPassFindings)) : ?>
+            <div class="mb-3">
+                <h3 class="h6 text-body-secondary mb-2">
+                    <i class="bi bi-check-circle me-1 text-success" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('runner.sec_positive_findings'), ENT_QUOTES, 'UTF-8') ?>
+                    <span class="badge text-bg-success ms-1"><?php echo count($_secPassFindings) ?></span>
+                    <button class="btn btn-link btn-sm p-0 ms-2 text-body-secondary text-decoration-none small"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#<?php echo $_secPassColId ?>"
+                            aria-expanded="false"
+                            aria-controls="<?php echo $_secPassColId ?>">
+                        <?php echo htmlspecialchars($i18n->t('runner.hooks_show_all'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                </h3>
+                <div class="collapse" id="<?php echo $_secPassColId ?>">
+                    <ul class="list-unstyled mb-0 d-flex flex-column gap-1">
+                        <?php foreach ($_secPassFindings as $_sfp) :
+                            $_sfpName    = (string) ($_sfp['name']    ?? '');
+                            $_sfpSummary = (string) ($_sfp['summary'] ?? '');
+                            ?>
+                        <li class="d-flex align-items-start gap-2 small">
+                            <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0" aria-hidden="true"></i>
+                            <div>
+                                <?php if ($_sfpName !== '') : ?>
+                                <code class="plugin-slug me-1">
+                                    <?php echo htmlspecialchars($_sfpName, ENT_QUOTES, 'UTF-8') ?>
+                                </code>
+                                <?php endif; ?>
+                                <?php echo htmlspecialchars($_sfpSummary, ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+                <?php endif; ?>
+
+            <!-- Analyzed files (collapsed) -->
+                <?php if (!empty($_secAnaldRows)) : ?>
+            <div class="mb-1">
+                <h3 class="h6 text-body-secondary mb-2">
+                    <i class="bi bi-file-code me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('runner.sec_analyzed_files'), ENT_QUOTES, 'UTF-8') ?>
+                    <span class="badge text-bg-secondary ms-1"><?php echo count($_secAnaldRows) ?></span>
+                    <button class="btn btn-link btn-sm p-0 ms-2 text-body-secondary text-decoration-none small"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#<?php echo $_secFilesColId ?>"
+                            aria-expanded="false"
+                            aria-controls="<?php echo $_secFilesColId ?>">
+                        <?php echo htmlspecialchars($i18n->t('runner.hooks_show_all'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
+                </h3>
+                <div class="collapse" id="<?php echo $_secFilesColId ?>">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0 small"
+                               aria-label="<?php echo htmlspecialchars($i18n->t('runner.sec_analyzed_files'), ENT_QUOTES, 'UTF-8') ?>">
+                            <thead>
+                                <tr>
+                                    <th class="text-body-secondary fw-normal"><?php echo htmlspecialchars($i18n->t('runner.file_col'), ENT_QUOTES, 'UTF-8') ?></th>
+                                    <th class="text-body-secondary fw-normal text-end" style="width:6rem"><?php echo htmlspecialchars($i18n->t('runner.sec_size_col'), ENT_QUOTES, 'UTF-8') ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($_secAnaldRows as $_sfRow) :
+                                    if (!is_array($_sfRow)) {
+                                        continue;
+                                    }
+                                    ?>
+                                <tr>
+                                    <td>
+                                        <code class="plugin-slug small">
+                                            <?php echo htmlspecialchars((string) ($_sfRow['file'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                                        </code>
+                                    </td>
+                                    <td class="text-end text-body-secondary">
+                                        <?php echo htmlspecialchars((string) ($_sfRow['size'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+                <?php endif; ?>
+            <?php endif; // $_isSecurity ?>
 
             <?php if (!empty($_metricsScalar) || !empty($_metricsArray)) : ?>
             <div class="mb-3">

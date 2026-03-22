@@ -41,13 +41,24 @@ class PluginResultRepository
         }
 
         $placeholders = implode(',', array_fill(0, count($pluginIds), '?'));
+
+        // Window function keeps only the latest result per (plugin_id, runner_id),
+        // avoiding loading the full history for heavily-analysed plugins.
         $stmt = $this->db->prepare(
-            "SELECT pr.plugin_id, r.runner_slug, r.runner_name, r.runner_sort_order,
-                    pr.pluginresult_result, pr.pluginresult_date
-             FROM pluginresult pr
-             JOIN runner r ON r.runner_id = pr.runner_id
-             WHERE pr.plugin_id IN ({$placeholders})
-             ORDER BY pr.pluginresult_date DESC"
+            "SELECT plugin_id, runner_slug, runner_name, runner_sort_order,
+                    pluginresult_result, pluginresult_date
+             FROM (
+                 SELECT pr.plugin_id, r.runner_slug, r.runner_name, r.runner_sort_order,
+                        pr.pluginresult_result, pr.pluginresult_date,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY pr.plugin_id, pr.runner_id
+                            ORDER BY pr.pluginresult_date DESC
+                        ) AS rn
+                 FROM pluginresult pr
+                 JOIN runner r ON r.runner_id = pr.runner_id
+                 WHERE pr.plugin_id IN ({$placeholders})
+             ) ranked
+             WHERE rn = 1"
         );
 
         $types = str_repeat('i', count($pluginIds));
@@ -57,9 +68,9 @@ class PluginResultRepository
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
 
-        // Group: plugin_id → runner_slug → decoded result (most recent wins).
+        // Group: plugin_id → runner_slug → decoded result.
         $byPlugin = [];
-        foreach (array_reverse($rows) as $row) {
+        foreach ($rows as $row) {
             $pid     = (int) $row['plugin_id'];
             $slug    = (string) $row['runner_slug'];
             $decoded = json_decode((string) $row['pluginresult_result'], true);
