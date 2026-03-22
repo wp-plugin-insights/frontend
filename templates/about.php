@@ -388,7 +388,7 @@ declare(strict_types=1);
                     </div>
                     <h4 class="h6 fw-semibold mb-0">
                         Ralf Wiechers
-                        <span aria-label="Netherlands" title="Netherlands">&#x1F1F3;&#x1F1F1;</span>
+                        <span aria-label="Germany" title="Germany">&#x1F1E9;&#x1F1EA;</span>
                     </h4>
                     <div class="d-flex gap-2 justify-content-center mt-2">
                         <a href="https://www.linkedin.com/in/ralf-wiechers/"
