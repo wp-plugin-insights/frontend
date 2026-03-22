@@ -38,6 +38,7 @@ $successMessages = [
     'runner_add'        => 'Runner created.',
     'runner_delete'     => 'Runner deleted.',
     'upload_requeue'    => 'Upload requeued.',
+    'queue_purge'       => 'Queue purged.',
     'user_admin'        => 'User admin status updated.',
     'wp_compat_upsert'  => 'WP–PHP compatibility entry saved.',
     'wp_compat_delete'  => 'WP–PHP compatibility entry deleted.',
@@ -446,7 +447,6 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
         <div class="card mb-4">
             <div class="card-header fw-semibold">
                 <i class="bi bi-collection me-1" aria-hidden="true"></i>RabbitMQ Queues
-                <span class="badge text-bg-secondary ms-1">read-only</span>
             </div>
             <div class="card-body p-0">
                 <?php if (empty($queues)) : ?>
@@ -465,18 +465,20 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                 <th class="text-end">Total</th>
                                 <th class="text-end">Consumers</th>
                                 <th>Durable</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($queues as $q) : ?>
                                 <?php
+                                $qName      = (string) ($q['name']                 ?? '');
                                 $qMsgs      = (int) ($q['messages']                ?? 0);
                                 $qReady     = (int) ($q['messages_ready']          ?? 0);
                                 $qUnacked   = (int) ($q['messages_unacknowledged'] ?? 0);
                                 $qConsumers = (int) ($q['consumers']               ?? 0);
                                 ?>
                             <tr>
-                                <td><code><?= esc((string) ($q['name'] ?? '')) ?></code></td>
+                                <td><code><?= esc($qName) ?></code></td>
                                 <td class="text-end">
                                     <?php if ($qReady > 0) : ?>
                                     <span class="badge text-bg-warning"><?= $qReady ?></span>
@@ -500,6 +502,20 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                     <?php endif; ?>
                                 </td>
                                 <td><?= !empty($q['durable']) ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-dash text-body-secondary"></i>' ?></td>
+                                <td class="text-end">
+                                    <form method="post" action="/admin/" class="d-inline"
+                                          onsubmit="return confirm('Purge all messages from queue &quot;<?= esc($qName) ?>&quot;? This cannot be undone.')">
+                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="queue_purge">
+                                        <input type="hidden" name="queue_name" value="<?= esc($qName) ?>">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Purge all messages from this queue"
+                                                <?= $qMsgs === 0 ? 'disabled' : '' ?>>
+                                            <i class="bi bi-trash" aria-hidden="true"></i> Purge
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

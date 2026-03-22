@@ -477,26 +477,17 @@ switch ($page) {
             break;
         }
 
-        $uploadName  = (string) ($upload['plugin_name']    ?? $upload['plugin_slug'] ?? $uuid);
-        $pageTitle   = $uploadName . ' — WP Plugin Insights';
+        $uploadName   = (string) ($upload['plugin_name'] ?? $upload['plugin_slug'] ?? $uuid);
+        $pageTitle    = $uploadName . ' — WP Plugin Insights';
         $pageMetaDesc = '';
 
-        // Load analysis results once the upload is processed
-        $analysisResults  = [];
-        $uploadSlug       = (string) ($upload['plugin_slug']    ?? '');
-        $uploadVersion    = (string) ($upload['plugin_version'] ?? '');
-        $uploadStatus     = (string) ($upload['upload_status']  ?? '');
-        if (
-            $uploadStatus === 'done' && $uploadSlug !== '' && $uploadVersion !== ''
-            && $repo !== null && $resultRepo !== null
-        ) {
-            $uploadPlugin = $repo->findBySlug($uploadSlug);
-            if ($uploadPlugin !== null) {
-                $analysisResults = $resultRepo->getByPluginVersion(
-                    (int) $uploadPlugin['plugin_id'],
-                    $uploadVersion
-                );
-            }
+        // Load analysis results for this upload (available as soon as any runner finishes).
+        $analysisResults = [];
+        $uploadPluginId  = isset($upload['plugin_id']) ? (int) $upload['plugin_id'] : 0;
+        $uploadVersion   = (string) ($upload['plugin_version'] ?? '');
+
+        if ($uploadPluginId > 0 && $uploadVersion !== '' && $resultRepo !== null) {
+            $analysisResults = $resultRepo->getByPluginVersion($uploadPluginId, $uploadVersion);
         }
 
         require __DIR__ . '/templates/plugin-upload.php';
@@ -621,6 +612,26 @@ switch ($page) {
                 redirect('/admin/?success=upload_requeue&tab=plugins');
             }
 
+            // ── Queue: purge ─────────────────────────────────────────────
+            if ($action === 'queue_purge') {
+                $queueName = trim((string) ($_POST['queue_name'] ?? ''));
+                if ($queueName !== '' && preg_match('/^[a-zA-Z0-9._\-]+$/', $queueName)) {
+                    $rabbitCfg = __DIR__ . '/../crons/rabbitmq.php';
+                    if (file_exists($rabbitCfg)) {
+                        require_once $rabbitCfg;
+                        $rabbitPurger = new RabbitMqInfo(RABBITMQ_HOST, RABBITMQ_USER, RABBITMQ_PASS);
+                        if (!$rabbitPurger->purgeQueue($queueName)) {
+                            $adminError = 'Purge failed: could not reach RabbitMQ management API.';
+                        }
+                    } else {
+                        $adminError = 'Purge failed: RabbitMQ configuration not found.';
+                    }
+                }
+                if ($adminError === null) {
+                    redirect('/admin/?success=queue_purge&tab=pipeline');
+                }
+            }
+
             // ── WP–PHP compat: upsert ───────────────────────────────────
             if ($action === 'wp_compat_upsert' && $wpCompatRepo !== null) {
                 $wcWp  = trim((string) ($_POST['wp_version']      ?? ''));
@@ -680,7 +691,7 @@ switch ($page) {
         $analysisStats  = $resultRepo?->getAnalysisStats()   ?? ['analyzed_plugins' => 0, 'total_results' => 0];
 
         // Recent API uploads + grade enrichment
-        $recentUploads = $uploadRepo?->getRecent(20) ?? [];
+        $recentUploads = $uploadRepo?->getRecentForAdmin(20) ?? [];
 
         // Build slug:version pairs for done uploads to fetch grades in one query
         $uploadGrades = [];

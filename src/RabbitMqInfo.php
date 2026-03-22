@@ -75,6 +75,39 @@ class RabbitMqInfo
         return is_array($data) ? $data : [];
     }
 
+    /**
+     * Purges all messages from a queue via the management API.
+     *
+     * Sends DELETE /api/queues/{vhost}/{name}/contents.
+     * Returns true on success (HTTP 204), false if the management API is
+     * unreachable or returns an error.
+     */
+    public function purgeQueue(string $queue, string $vhost = '/'): bool
+    {
+        $url = sprintf(
+            'http://%s:%d/api/queues/%s/%s/contents',
+            $this->host,
+            $this->port,
+            rawurlencode($vhost),
+            rawurlencode($queue)
+        );
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => self::TIMEOUT,
+            CURLOPT_USERPWD        => $this->user . ':' . $this->pass,
+            CURLOPT_CUSTOMREQUEST  => 'DELETE',
+        ]);
+
+        curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errno    = curl_errno($ch);
+        curl_close($ch);
+
+        return $errno === 0 && $httpCode === 204;
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
