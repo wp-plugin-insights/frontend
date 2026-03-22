@@ -28,6 +28,10 @@
             <a href="/about/"
                class="nav-link px-2<?= $activePage === 'about' ? ' active" aria-current="page' : '' ?>"
             ><?= htmlspecialchars($i18n->t('nav.about'), ENT_QUOTES, 'UTF-8') ?></a>
+            <a href="https://api.plugininsight.com/"
+               class="nav-link px-2"
+               target="_blank"
+               rel="noopener noreferrer"><?php echo htmlspecialchars($i18n->t('nav.api'), ENT_QUOTES, 'UTF-8') ?></a>
 
             <?php if (!empty($currentUser)) : ?>
             <?php if (!empty($currentUser['user_is_admin'])) : ?>

@@ -10,6 +10,7 @@ return [
     // Navigation & chrome
     'nav.home'              => 'Home',
     'nav.about'             => 'About',
+    'nav.api'               => 'API',
     'theme.to_light'        => 'Switch to light mode',
     'theme.to_dark'         => 'Switch to dark mode',
 
@@ -259,6 +260,23 @@ return [
     'runner.hooks_provided_title'       => 'Hooks provided',
     'runner.hooks_show_all'             => 'Show all',
     'runner.hooks_more'                 => 'more',
+    'runner.hooks_doc_pct'              => 'hooks documented',
+
+    // Runner cards — translate runner (additions)
+    'runner.tr_major_coverage'   => 'major locale coverage',
+    'runner.td_auto'             => 'auto (not declared)',
+    'runner.td_none'             => 'none',
+
+    // Runner cards — security runner
+    'runner.sec_files_analyzed'  => 'files analyzed',
+    'runner.sec_critical'        => 'critical',
+    'runner.sec_errors'          => 'errors',
+    'runner.sec_warnings'        => 'warnings',
+    'runner.sec_positive'        => 'positive',
+    'runner.sec_findings'        => 'Findings',
+    'runner.sec_positive_findings' => 'Positive findings',
+    'runner.sec_analyzed_files'  => 'Analyzed files',
+    'runner.sec_size_col'        => 'Size',
 
     // Runner cards — translate grade adjustment notes
     'runner.tr_note_no_textdomain'     => 'No text domain is declared — grade penalised −2',

@@ -172,66 +172,6 @@ if (empty($analysisResults)) :
             $_issues               = [];
         }
 
-        // ── translate: grade adjustment ────────────────────────────────────
-        // The runner grades coverage, but structural problems deserve extra
-        // penalties applied here before the card header renders.
-        //
-        //  No text domain declared       → −2 grades (structural failure)
-        //  Invalid/mismatched text domain → −1 grade
-        //  Any high-severity issues       → −1 grade
-        //  3 or more high-severity issues → −2 grades (replaces the −1)
-        //  5 or more medium-severity issues → −1 additional grade
-        //
-        // Adjustments stack (e.g. no TD + high issues = −3 total), capped at F.
-        $_trGradeNote = '';
-        if ($_isTranslate) {
-            $_trEarlyTdValid    = (bool) ($_metrics['text_domain_valid'] ?? true);
-            $_trEarlyTdDeclared = isset($_result['details']['text_domain']['declared'])
-                ? (string) $_result['details']['text_domain']['declared'] : null;
-            if ($_trEarlyTdDeclared === '') {
-                $_trEarlyTdDeclared = null;
-            }
-            $_trEarlyHigh = isset($_translateIssueCounts['high'])
-                ? (int) $_translateIssueCounts['high']   : 0;
-            $_trEarlyMed  = isset($_translateIssueCounts['medium'])
-                ? (int) $_translateIssueCounts['medium'] : 0;
-
-            $_gl      = ['A', 'B', 'C', 'D', 'F'];
-            $_gPos    = (int) (array_search($_grade, $_gl, true) !== false
-                ? array_search($_grade, $_gl, true) : 2);
-            $_trNotes = [];
-
-            if ($_trEarlyTdDeclared === null) {
-                $_gPos   += 2;
-                $_trNotes[] = $i18n->t('runner.tr_note_no_textdomain');
-            } elseif (!$_trEarlyTdValid) {
-                $_gPos   += 1;
-                $_trNotes[] = $i18n->t('runner.tr_note_invalid_textdomain');
-            }
-
-            if ($_trEarlyHigh >= 3) {
-                $_gPos   += 2;
-                $_trNotes[] = $i18n->t('runner.tr_note_many_high', ['count' => $_trEarlyHigh]);
-            } elseif ($_trEarlyHigh > 0) {
-                $_gPos   += 1;
-                $_trNotes[] = $i18n->t('runner.tr_note_high', ['count' => $_trEarlyHigh]);
-            }
-
-            if ($_trEarlyMed >= 5) {
-                $_gPos   += 1;
-                $_trNotes[] = $i18n->t('runner.tr_note_many_medium', ['count' => $_trEarlyMed]);
-            }
-
-            if (!empty($_trNotes)) {
-                $_gPos       = max(0, min(count($_gl) - 1, $_gPos));
-                $_grade      = $_gl[$_gPos];
-                $_gradeCs    = $_gradeClass[$_grade] ?? '';
-                $_percentage = match ($_grade) {
-                    'A' => 95, 'B' => 80, 'C' => 65, 'D' => 50, default => 20,
-                };
-                $_trGradeNote = implode('; ', $_trNotes);
-            }
-        }
         ?>
 <div class="card analysis-card">
     <div class="card-header p-0">
@@ -239,7 +179,7 @@ if (empty($analysisResults)) :
                 type="button"
                 data-bs-toggle="collapse"
                 data-bs-target="#<?= $_cardId ?>"
-                aria-expanded="<?= $_cardIndex === 1 ? 'true' : 'false' ?>"
+                aria-expanded="false"
                 aria-controls="<?= $_cardId ?>">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi <?= htmlspecialchars($_iconClass, ENT_QUOTES, 'UTF-8') ?> fs-5 text-body-secondary" aria-hidden="true"></i>
@@ -256,7 +196,7 @@ if (empty($analysisResults)) :
             </div>
         </button>
     </div>
-    <div class="collapse <?= $_cardIndex === 1 ? 'show' : '' ?>" id="<?= $_cardId ?>">
+    <div class="collapse" id="<?= $_cardId ?>">
         <div class="card-body border-top">
 
             <?php
@@ -292,10 +232,14 @@ if (empty($analysisResults)) :
                 'tested_versions', 'based_on_version_scan', 'summary',
             ];
             $_translateKeys = [
-                'detected', 'compliant', 'untranslated_strings', 'text_domain_consistency',
-                'text_domain_valid', 'js_has_translations', 'js_total_strings',
-                'js_translated', 'load_hook_has_call', 'load_hook_issues',
-                'best_practices_issues',
+                'has_translatable_strings',
+                'translation_locales_detected', 'translation_locales_compliant',
+                'translation_major_locale_coverage',
+                'text_domain_consistency', 'text_domain_valid',
+                'issues_high', 'issues_medium', 'issues_low', 'issues_trivial',
+                'untranslated_strings',
+                'js_has_translations', 'js_total_strings', 'js_translated',
+                'load_hook_has_call', 'load_hook_issues', 'best_practices_issues',
             ];
             $_wpSinceKeys = ['declared_min_wp', 'suggested_min_wp'];
             $_hooksKeys   = [
@@ -304,6 +248,8 @@ if (empty($analysisResults)) :
                 'total_hooks_used', 'total_hooks_provided',
                 'unique_actions_used', 'unique_filters_used',
                 'unique_actions_provided', 'unique_filters_provided',
+                'documented_hooks_count', 'documented_hooks_percentage',
+                'well_documented_hooks_count',
             ];
             $_csKeys = [
                 'total_errors', 'total_warnings', 'total_fixable',
@@ -577,8 +523,24 @@ if (empty($analysisResults)) :
                 $_hkUFiltProv     = isset($_metrics['unique_filters_provided']) ? (int) $_metrics['unique_filters_provided'] : 0;
                 $_hkTActUsed      = isset($_metrics['total_actions_used'])    ? (int) $_metrics['total_actions_used']    : 0;
                 $_hkTFiltUsed     = isset($_metrics['total_filters_used'])    ? (int) $_metrics['total_filters_used']    : 0;
-                $_hkTActProv      = isset($_metrics['total_actions_provided']) ? (int) $_metrics['total_actions_provided'] : 0;
-                $_hkTFiltProv     = isset($_metrics['total_filters_provided']) ? (int) $_metrics['total_filters_provided'] : 0;
+                $_hkTActProv        = isset($_metrics['total_actions_provided'])
+                    ? (int) $_metrics['total_actions_provided'] : 0;
+                $_hkTFiltProv       = isset($_metrics['total_filters_provided'])
+                    ? (int) $_metrics['total_filters_provided'] : 0;
+
+                // Documentation metrics (new)
+                $_hkDocCount        = isset($_metrics['documented_hooks_count'])
+                    ? (int) $_metrics['documented_hooks_count']      : 0;
+                $_hkDocPct          = isset($_metrics['documented_hooks_percentage'])
+                    ? (int) $_metrics['documented_hooks_percentage']  : 0;
+                $_hkWellDocCount    = isset($_metrics['well_documented_hooks_count'])
+                    ? (int) $_metrics['well_documented_hooks_count']  : 0;
+
+                // Issues (e.g. hooks.no_documentation) stored in $_translateIssueCounts
+                $_hkIssuesTop  = is_array($_translateIssueCounts['top'] ?? null)
+                    ? $_translateIssueCounts['top'] : [];
+                $_hkIssueHigh  = isset($_translateIssueCounts['high'])
+                    ? (int) $_translateIssueCounts['high']   : 0;
                 ?>
 
             <!-- Reasoning -->
@@ -618,7 +580,43 @@ if (empty($analysisResults)) :
                     </div>
                     <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.hooks_extensible'), ENT_QUOTES, 'UTF-8') ?></div>
                 </div>
+                <?php if ($_hkTotalProvided > 0) : ?>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 <?php echo $_hkDocPct >= 80 ? 'text-success' : ($_hkDocPct >= 40 ? 'text-warning' : 'text-danger') ?>">
+                        <?php echo htmlspecialchars($_hkDocPct . '%', ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.hooks_doc_pct'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <?php endif; ?>
             </div>
+
+            <!-- Issues (e.g. no documentation warning) -->
+                <?php if (!empty($_hkIssuesTop)) : ?>
+            <div class="mb-3">
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-1">
+                    <?php foreach ($_hkIssuesTop as $_hkIssue) :
+                        if (!is_array($_hkIssue)) {
+                            continue;
+                        }
+                        $_hkISev   = strtolower((string) ($_hkIssue['severity'] ?? 'info'));
+                        $_hkIMsg   = (string) ($_hkIssue['message'] ?? '');
+                        $_hkIBadge = match ($_hkISev) {
+                            'critical', 'high' => 'text-bg-danger',
+                            'medium'           => 'text-bg-warning',
+                            'low'              => 'text-bg-secondary',
+                            default            => 'text-bg-info',
+                        };
+                        ?>
+                    <li class="d-flex align-items-start gap-2 small">
+                        <span class="badge <?php echo htmlspecialchars($_hkIBadge, ENT_QUOTES, 'UTF-8') ?> mt-1 flex-shrink-0">
+                            <?php echo htmlspecialchars($_hkISev, ENT_QUOTES, 'UTF-8') ?>
+                        </span>
+                        <span><?php echo htmlspecialchars($_hkIMsg, ENT_QUOTES, 'UTF-8') ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+                <?php endif; ?>
 
             <!-- Breakdown table: unique + total per category -->
             <div class="mb-3">
@@ -788,14 +786,23 @@ if (empty($analysisResults)) :
                     ? $_trCapabs['supported_locales'] : [];
 
                 // Metrics
-                $_trDetected    = isset($_metrics['detected'])            ? (int) $_metrics['detected']            : 0;
-                $_trCompliant   = isset($_metrics['compliant'])           ? (int) $_metrics['compliant']           : 0;
-                $_trUntranslated = isset($_metrics['untranslated_strings']) ? (int) $_metrics['untranslated_strings'] : 0;
-                $_trTdValid     = (bool) ($_metrics['text_domain_valid']  ?? false);
-                $_trJsHasTr     = (bool) ($_metrics['js_has_translations'] ?? false);
-                $_trJsTotal     = isset($_metrics['js_total_strings'])    ? (int) $_metrics['js_total_strings']    : 0;
-                $_trJsTranslated = isset($_metrics['js_translated'])      ? (int) $_metrics['js_translated']       : 0;
-                $_trLoadCall    = (bool) ($_metrics['load_hook_has_call'] ?? false);
+                $_trDetected     = isset($_metrics['translation_locales_detected'])
+                    ? (int) $_metrics['translation_locales_detected'] : 0;
+                $_trCompliant    = isset($_metrics['translation_locales_compliant'])
+                    ? (int) $_metrics['translation_locales_compliant'] : 0;
+                $_trMajorCov     = isset($_metrics['translation_major_locale_coverage'])
+                    ? (float) $_metrics['translation_major_locale_coverage'] : null;
+                $_trUntranslated = isset($_metrics['untranslated_strings'])
+                    ? (int) $_metrics['untranslated_strings'] : 0;
+                $_trTdValid      = (bool) ($_metrics['text_domain_valid']   ?? false);
+                $_trJsHasTr      = (bool) ($_metrics['js_has_translations'] ?? false);
+                $_trJsTotal      = isset($_metrics['js_total_strings'])
+                    ? (int) $_metrics['js_total_strings']  : 0;
+                $_trJsTranslated = isset($_metrics['js_translated'])
+                    ? (int) $_metrics['js_translated']     : 0;
+                $_trLoadCall     = (bool) ($_metrics['load_hook_has_call']  ?? false);
+                $_trLoadIssues   = isset($_metrics['load_hook_issues'])
+                    ? (int) $_metrics['load_hook_issues']  : 0;
 
                 // Text domain
                 $_trTdDeclared  = (isset($_trTextDomain['declared']) && $_trTextDomain['declared'] !== null)
@@ -822,12 +829,6 @@ if (empty($analysisResults)) :
             <p class="small mb-3"><?php echo htmlspecialchars($_reasoning, ENT_QUOTES, 'UTF-8') ?></p>
                 <?php endif; ?>
 
-                <?php if ($_trGradeNote !== '') : ?>
-            <p class="small text-body-secondary mb-3">
-                <i class="bi bi-info-circle me-1" aria-hidden="true"></i><?php echo htmlspecialchars($_trGradeNote, ENT_QUOTES, 'UTF-8') ?>.
-            </p>
-                <?php endif; ?>
-
             <!-- Quick stats row -->
             <div class="d-flex flex-wrap gap-3 mb-3">
                 <div class="text-center">
@@ -835,11 +836,19 @@ if (empty($analysisResults)) :
                     <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.locales_detected'), ENT_QUOTES, 'UTF-8') ?></div>
                 </div>
                 <div class="text-center">
-                    <div class="fw-bold fs-5 <?php echo $_trCompliant > 0 ? 'text-success' : 'text-danger' ?>">
+                    <div class="fw-bold fs-5 <?php echo $_trCompliant > 0 ? 'text-success' : 'text-body-secondary' ?>">
                         <?php echo htmlspecialchars((string) $_trCompliant, ENT_QUOTES, 'UTF-8') ?>
                     </div>
                     <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.locales_compliant'), ENT_QUOTES, 'UTF-8') ?></div>
                 </div>
+                <?php if ($_trMajorCov !== null) : ?>
+                <div class="text-center">
+                    <div class="fw-bold fs-5 <?php echo $_trMajorCov >= 80 ? 'text-success' : ($_trMajorCov >= 50 ? 'text-warning' : 'text-danger') ?>">
+                        <?php echo htmlspecialchars(number_format($_trMajorCov, 1) . '%', ENT_QUOTES, 'UTF-8') ?>
+                    </div>
+                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.tr_major_coverage'), ENT_QUOTES, 'UTF-8') ?></div>
+                </div>
+                <?php endif; ?>
                 <div class="text-center">
                     <div class="fw-bold fs-5 <?php echo $_trUntranslated > 0 ? 'text-warning' : 'text-success' ?>">
                         <?php echo htmlspecialchars((string) $_trUntranslated, ENT_QUOTES, 'UTF-8') ?>
@@ -855,16 +864,6 @@ if (empty($analysisResults)) :
                         <?php endif; ?>
                     </div>
                     <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.text_domain'), ENT_QUOTES, 'UTF-8') ?></div>
-                </div>
-                <div class="text-center">
-                    <div class="fw-bold fs-5">
-                        <?php if ($_trLoadCall) : ?>
-                        <i class="bi bi-check-circle-fill text-success" aria-label="Present"></i>
-                        <?php else : ?>
-                        <i class="bi bi-x-circle-fill text-danger" aria-label="Missing"></i>
-                        <?php endif; ?>
-                    </div>
-                    <div class="small text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.load_textdomain'), ENT_QUOTES, 'UTF-8') ?></div>
                 </div>
                 <?php if ($_trJsTotal > 0) : ?>
                 <div class="text-center">
@@ -893,7 +892,7 @@ if (empty($analysisResults)) :
                 <?php endif; ?>
             </div>
 
-            <!-- Coverage by locale -->
+            <!-- Coverage by locale (collapsible) -->
                 <?php if (!empty($_trLocales)) :
                     // Sort by coverage desc, then locale code asc on tie
                     uksort($_trLocales, static function (string $a, string $b) use ($_trLocales): int {
@@ -901,41 +900,56 @@ if (empty($analysisResults)) :
                         $_pctB = isset($_trLocales[$b]['percentage']) ? (int) $_trLocales[$b]['percentage'] : 0;
                         return $_pctB !== $_pctA ? $_pctB - $_pctA : strcmp($a, $b);
                     });
+                    $_trLocColId = htmlspecialchars($_cardId . '-locales', ENT_QUOTES, 'UTF-8');
                     ?>
             <div class="mb-3">
                 <h3 class="h6 text-body-secondary mb-2">
-                    <i class="bi bi-bar-chart me-1" aria-hidden="true"></i><?php echo htmlspecialchars($i18n->t('runner.coverage_by_locale'), ENT_QUOTES, 'UTF-8') ?>
+                    <i class="bi bi-bar-chart me-1" aria-hidden="true"></i>
+                    <?php echo htmlspecialchars($i18n->t('runner.coverage_by_locale'), ENT_QUOTES, 'UTF-8') ?>
+                    <span class="badge text-bg-secondary ms-1"><?php echo count($_trLocales) ?></span>
+                    <button class="btn btn-link btn-sm p-0 ms-2 text-body-secondary text-decoration-none small"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#<?php echo $_trLocColId ?>"
+                            aria-expanded="false"
+                            aria-controls="<?php echo $_trLocColId ?>">
+                        <?php echo htmlspecialchars($i18n->t('runner.hooks_show_all'), ENT_QUOTES, 'UTF-8') ?>
+                    </button>
                 </h3>
-                <table class="table table-sm table-borderless mb-0 small"
-                       aria-label="<?php echo htmlspecialchars($i18n->t('runner.coverage_by_locale'), ENT_QUOTES, 'UTF-8') ?>">
-                    <thead>
-                        <tr>
-                            <th class="text-body-secondary fw-normal" style="width:25%"><?php echo htmlspecialchars($i18n->t('runner.locale_col'), ENT_QUOTES, 'UTF-8') ?></th>
-                            <th class="text-body-secondary fw-normal" style="width:25%"><?php echo htmlspecialchars($i18n->t('runner.language_col'), ENT_QUOTES, 'UTF-8') ?></th>
-                            <th class="text-body-secondary fw-normal"><?php echo htmlspecialchars($i18n->t('runner.coverage_col'), ENT_QUOTES, 'UTF-8') ?></th>
-                            <th class="text-body-secondary fw-normal text-end" style="width:10%">%</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($_trLocales as $_trLocCode => $_trLocRow) :
-                            $_trPct = isset($_trLocRow['percentage']) ? (int) $_trLocRow['percentage'] : 0;
-                            $_trBar = $_trPct >= 80 ? 'bg-success' : ($_trPct >= 40 ? 'bg-warning' : 'bg-danger');
-                            ?>
-                        <tr>
-                            <td><code class="plugin-slug"><?php echo htmlspecialchars((string) $_trLocCode, ENT_QUOTES, 'UTF-8') ?></code></td>
-                            <td><?php echo htmlspecialchars((string) ($_trLocRow['name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td>
-                                <div class="progress" style="height:6px" role="progressbar"
-                                     aria-valuenow="<?php echo $_trPct ?>" aria-valuemin="0" aria-valuemax="100">
-                                    <div class="progress-bar <?php echo htmlspecialchars($_trBar, ENT_QUOTES, 'UTF-8') ?>"
-                                         style="width:<?php echo $_trPct ?>%"></div>
-                                </div>
-                            </td>
-                            <td class="text-end"><?php echo htmlspecialchars((string) $_trPct, ENT_QUOTES, 'UTF-8') ?>%</td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <div class="collapse" id="<?php echo $_trLocColId ?>">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless mb-0 small"
+                               aria-label="<?php echo htmlspecialchars($i18n->t('runner.coverage_by_locale'), ENT_QUOTES, 'UTF-8') ?>">
+                            <thead>
+                                <tr>
+                                    <th class="text-body-secondary fw-normal" style="width:20%"><?php echo htmlspecialchars($i18n->t('runner.locale_col'), ENT_QUOTES, 'UTF-8') ?></th>
+                                    <th class="text-body-secondary fw-normal" style="width:25%"><?php echo htmlspecialchars($i18n->t('runner.language_col'), ENT_QUOTES, 'UTF-8') ?></th>
+                                    <th class="text-body-secondary fw-normal"><?php echo htmlspecialchars($i18n->t('runner.coverage_col'), ENT_QUOTES, 'UTF-8') ?></th>
+                                    <th class="text-body-secondary fw-normal text-end" style="width:10%">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($_trLocales as $_trLocCode => $_trLocRow) :
+                                    $_trPct = isset($_trLocRow['percentage']) ? (int) $_trLocRow['percentage'] : 0;
+                                    $_trBar = $_trPct >= 80 ? 'bg-success' : ($_trPct >= 40 ? 'bg-warning' : 'bg-danger');
+                                    ?>
+                                <tr>
+                                    <td><code class="plugin-slug"><?php echo htmlspecialchars((string) $_trLocCode, ENT_QUOTES, 'UTF-8') ?></code></td>
+                                    <td><?php echo htmlspecialchars((string) ($_trLocRow['name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td>
+                                        <div class="progress" style="height:6px" role="progressbar"
+                                             aria-valuenow="<?php echo $_trPct ?>" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar <?php echo htmlspecialchars($_trBar, ENT_QUOTES, 'UTF-8') ?>"
+                                                 style="width:<?php echo $_trPct ?>%"></div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end"><?php echo htmlspecialchars((string) $_trPct, ENT_QUOTES, 'UTF-8') ?>%</td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
                 <?php endif; ?>
 
@@ -954,8 +968,10 @@ if (empty($analysisResults)) :
                         <span class="text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.td_declared'), ENT_QUOTES, 'UTF-8') ?>: </span>
                         <?php if ($_trTdDeclared !== null && $_trTdDeclared !== '') : ?>
                         <code class="plugin-slug"><?php echo htmlspecialchars($_trTdDeclared, ENT_QUOTES, 'UTF-8') ?></code>
+                        <?php elseif ($_trTdValid) : ?>
+                        <em class="text-body-secondary"><?php echo htmlspecialchars($i18n->t('runner.td_auto'), ENT_QUOTES, 'UTF-8') ?></em>
                         <?php else : ?>
-                        <em class="text-danger">none</em>
+                        <em class="text-danger"><?php echo htmlspecialchars($i18n->t('runner.td_none'), ENT_QUOTES, 'UTF-8') ?></em>
                         <?php endif; ?>
                     </div>
                     <?php if ($_trTdExpected !== '') : ?>
@@ -1223,7 +1239,7 @@ if (empty($analysisResults)) :
                     }
                 }
 
-                $_secPassColId  = htmlspecialchars($_cardId . '-sec-pass',  ENT_QUOTES, 'UTF-8');
+                $_secPassColId  = htmlspecialchars($_cardId . '-sec-pass', ENT_QUOTES, 'UTF-8');
                 $_secFilesColId = htmlspecialchars($_cardId . '-sec-files', ENT_QUOTES, 'UTF-8');
                 ?>
 
