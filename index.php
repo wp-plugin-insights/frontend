@@ -584,6 +584,43 @@ switch ($page) {
                 redirect('/admin/?success=runner_delete&tab=pipeline');
             }
 
+            // ── Runner: restart systemd service ──────────────────────────
+            if ($action === 'runner_restart' && $runnerRepo !== null) {
+                $runnerId = (int) ($_POST['runner_id'] ?? 0);
+                if ($runnerId > 0) {
+                    $runners_all = $runnerRepo->findAll();
+                    $rSlug = '';
+                    foreach ($runners_all as $r) {
+                        if ((int) $r['runner_id'] === $runnerId) {
+                            $rSlug = (string) $r['runner_slug'];
+                            break;
+                        }
+                    }
+                    // Validate slug: only lowercase letters, digits, hyphens
+                    if ($rSlug !== '' && preg_match('/^[a-z0-9\-]+$/', $rSlug)) {
+                        $service = 'plugin-insights@runner-' . $rSlug . '.service';
+                        exec('sudo /usr/bin/systemctl restart ' . escapeshellarg($service) . ' 2>&1', $out, $exitCode);
+                        if ($exitCode !== 0) {
+                            $adminError = 'Restart failed: ' . implode(' ', $out);
+                        } else {
+                            redirect('/admin/?success=runner_restart&tab=pipeline');
+                        }
+                    }
+                }
+                if ($adminError === null) {
+                    redirect('/admin/?success=runner_restart&tab=pipeline');
+                }
+            }
+
+            // ── Upload: requeue ──────────────────────────────────────────
+            if ($action === 'upload_requeue' && $uploadRepo !== null) {
+                $upUuid = trim((string) ($_POST['upload_uuid'] ?? ''));
+                if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $upUuid)) {
+                    $uploadRepo->requeueByUuid($upUuid);
+                }
+                redirect('/admin/?success=upload_requeue&tab=plugins');
+            }
+
             // ── WP–PHP compat: upsert ───────────────────────────────────
             if ($action === 'wp_compat_upsert' && $wpCompatRepo !== null) {
                 $wcWp  = trim((string) ($_POST['wp_version']      ?? ''));

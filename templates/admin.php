@@ -34,8 +34,10 @@ $apiHostname = $settings['api_hostname']  ?? 'api.plugininsight.com';
 $successMessages = [
     'api_settings'      => 'API settings saved.',
     'runner_toggle'     => 'Runner status updated.',
+    'runner_restart'    => 'Runner restarted.',
     'runner_add'        => 'Runner created.',
     'runner_delete'     => 'Runner deleted.',
+    'upload_requeue'    => 'Upload requeued.',
     'user_admin'        => 'User admin status updated.',
     'wp_compat_upsert'  => 'WP–PHP compatibility entry saved.',
     'wp_compat_delete'  => 'WP–PHP compatibility entry deleted.',
@@ -391,6 +393,15 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                             <?= $rActive ? 'Deactivate' : 'Activate' ?>
                                         </button>
                                     </form>
+                                    <form method="post" action="/admin/" class="d-inline ms-1">
+                                        <?= \PluginInsight\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="runner_restart">
+                                        <input type="hidden" name="runner_id" value="<?= $rId ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                                title="Restart systemd service">
+                                            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -560,7 +571,6 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
         <div class="card mb-4">
             <div class="card-header fw-semibold">
                 <i class="bi bi-cloud-upload me-1" aria-hidden="true"></i>Recent API Uploads
-                <span class="badge text-bg-secondary ms-1">read-only</span>
             </div>
             <div class="card-body p-0">
                 <?php if (empty($recentUploads)) : ?>
@@ -621,13 +631,24 @@ if (isset($_GET['tab']) && in_array($_GET['tab'], ['overview','pipeline','plugin
                                 </td>
                                 <td class="text-body-secondary small font-monospace"><?= esc((string) ($up['upload_ip'] ?? '')) ?></td>
                                 <td class="text-body-secondary small"><?= esc(substr((string) ($up['uploaded_at'] ?? ''), 0, 16)) ?></td>
-                                <td>
+                                <td class="text-end" style="white-space:nowrap">
                                     <?php if ($upUuid !== '') : ?>
                                     <a href="/api/<?= esc($upUuid) ?>/"
                                        class="btn btn-sm <?= $upStatus === 'done' ? 'btn-primary' : 'btn-outline-secondary' ?>"
                                        target="_blank">
                                         <?= $upStatus === 'done' ? 'View Report' : 'View' ?>
                                     </a>
+                                        <?php if (in_array($upStatus, ['queued', 'error'], true)) : ?>
+                                    <form method="post" action="/admin/" class="d-inline ms-1">
+                                            <?= \PluginInsight\Csrf::field() ?>
+                                        <input type="hidden" name="action" value="upload_requeue">
+                                        <input type="hidden" name="upload_uuid" value="<?= esc($upUuid) ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                                title="Reset to pending so the cron re-publishes it">
+                                            <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Requeue
+                                        </button>
+                                    </form>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
                             </tr>
